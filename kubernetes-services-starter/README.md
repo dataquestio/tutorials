@@ -1,25 +1,17 @@
-# Continuous ETL: Python + Postgres ETL
+# Kubernetes ETL Demo
 
-This subdirectory contains the baseline ETL script for the **Kubernetes Services, Rollouts, and Namespages** tutorial on Dataquest.
+This is a modified version of the ETL script from our Docker Compose tutorials, adapted to run continuously in Kubernetes for the **Kubernetes Services, Rollouts, and Namespages** tutorial on Dataquest.
 
 ## Included
 
 * `app.py`: A simple Python ETL script that connects to a Postgres container and inserts a row into a table.
 * `Dockerfile`: A single-stage Dockerfile that installs Python and runs the script.
-* `docker-compose.yaml`: Defines two services—`db` (Postgres) and `app` (your ETL script).
 
-## How to Run
+## Build the image
 
-To start the pipeline:
-
-```
-docker compose up --build
+```bash
+docker build -t etl-app:v1 .
 ```
 
-This will build the app container, start Postgres, and run the ETL script once.
-
-## Notes
-
-* Credentials are hardcoded in `docker-compose.yaml` for simplicity.
-* This version is intentionally un-hardened.
-* For best results, run this in a directory with Docker installed and no conflicting services on port 5432.
+## Deploy to Kubernetes
+Follow the instructions in the Kubernetes Services tutorial.

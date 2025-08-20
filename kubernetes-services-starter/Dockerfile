@@ -6,4 +6,4 @@ COPY app.py .
 
 RUN pip install psycopg2-binary
 
-CMD ["python", "app.py"]
+CMD ["python", "-u", "app.py"]
