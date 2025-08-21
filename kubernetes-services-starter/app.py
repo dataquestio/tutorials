@@ -51,7 +51,8 @@ def run_etl():
         traceback.print_exc(file=sys.stdout)
         sys.stdout.flush()
 
-while True:
-    run_etl()
-    log("Sleeping for 30 seconds...")
-    time.sleep(30)
+if __name__ == "__main__":
+    while True:
+        run_etl()
+        log("Sleeping for 30 seconds...")
+        time.sleep(30)
