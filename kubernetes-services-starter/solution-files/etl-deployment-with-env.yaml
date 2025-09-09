@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etl-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: etl-app
+  template:
+    metadata:
+      labels:
+        app: etl-app
+
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: etl-app
+        image: etl-app:v1
+        imagePullPolicy: Never
+        env:
+        - name: DB_HOST
+          value: postgres
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: etl
+        - name: DB_PASSWORD
+          value: mysecretpassword
+        - name: DB_NAME
+          value: pipeline
+        - name: APP_VERSION
+          value: v1
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - |
+                PGPASSWORD="$DB_PASSWORD" \
+                psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT 1;" >/dev/null
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # get the current time in seconds since 1970
+              now=$(date +%s)
+              # read the last "heartbeat" timestamp from a file
+              # if the file doesn't exist, just pretend it's 0
+              hb=$(cat /tmp/etl_heartbeat 2>/dev/null || echo 0)
+              # subtract: how many seconds since the last heartbeat?
+              # check that it's less than 600 seconds (10 minutes)
+              [ $((now - hb)) -lt 600 ]
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 2
