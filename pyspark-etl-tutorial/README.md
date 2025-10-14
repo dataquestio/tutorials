@@ -47,8 +47,6 @@ pyspark-etl-tutorial/
 │       ├── online_orders.csv
 │       ├── store_orders.csv
 │       └── mobile_orders.csv
-├── src/
-│   └── (you'll create etl_pipeline.py here)
 ├── main.py                     # Skeleton orchestration code
 └── requirements.txt
 ```
