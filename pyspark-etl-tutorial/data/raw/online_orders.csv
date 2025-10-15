@@ -1,0 +1,29 @@
+order_id,customer_id,product_name,price,quantity,order_date,region
+ORD_1001,CUST_5421,Organic Bananas,$2.99,3,2024-10-15,West
+ORD_1002,8823,Whole Milk,3.49,2,2024-10-16,East
+ORD_1003,CUST_9912,Sourdough Bread,$4.50,1,2024-10-16,West
+ORD_1004,TEST_USER,TEST PRODUCT - IGNORE,$0.00,1,2024-10-16,Test
+ORD_1005,3344,Greek Yogurt,5.99,4,2024-10-17,South
+ORD_1006,CUST_7721,Free Range Eggs,$6.99,2,2024-10-17,North
+ORD_1007,5566,Avocados,$1.25,6,2024-10-18,West
+ORD_1008,CUST_2211,Almond Butter,12.99,1,2024-10-18,East
+ORD_1009,4455,Quinoa,$8.50,2,2024-10-19,South
+ORD_1010,CUST_8899,Cherry Tomatoes,4.99,3,2024-10-19,West
+ORD_1011,9988,Spinach,$3.75,2,2024-10-20,North
+ORD_1012,CUST_1122,Salmon Fillet,$18.99,1,2024-10-20,East
+ORD_1013,6677,Ground Beef,9.99,2,2024-10-21,South
+ORD_1014,CUST_3344,Chicken Breast,$12.50,1,2024-10-21,West
+ORD_1015,TEST_5566,Regular Product,7.99,1,2024-10-21,North
+ORD_1016,CUST_7788,Pasta Sauce,$4.25,3,2024-10-22,East
+ORD_1017,2233,Olive Oil,$15.99,1,2024-10-23,South
+ORD_1018,CUST_4455,Coffee Beans,$13.50,2,2024-10-23,West
+ORD_1019,8877,Orange Juice,$5.49,1,2024-10-24,North
+ORD_1020,CUST_9900,Granola,$6.75,2,2024-10-24,East
+ORD_1021,1122,Peanut Butter,4.99,1,2024-10-25,South
+ORD_1022,CUST_6655,Sweet Potatoes,$3.99,4,2024-10-25,West
+ORD_1023,5544,Bell Peppers,2.50,5,2024-10-26,North
+ORD_1024,CUST_7766,Cheddar Cheese,$7.99,1,2024-10-26,East
+ORD_1025,3322,Blueberries,5.99,2,2024-10-27,South
+ORD_1001,CUST_5421,Organic Bananas,$2.99,3,2024-10-15,West
+ORD_1026,,Brown Rice,$4.50,3,2024-10-27,West
+ORD_1027,CUST_8811,Kale,$2.99,1,2024-10-28,North
