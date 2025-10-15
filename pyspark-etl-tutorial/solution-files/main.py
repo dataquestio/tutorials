@@ -59,7 +59,7 @@ def main():
 
     except Exception as e:
         logger.error(f"Pipeline failed: {str(e)}")
-        logger.debug(traceback.format_exc())
+        logger.error(traceback.format_exc())
         raise
 
     finally:

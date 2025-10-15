@@ -53,7 +53,7 @@ def extract_all_data(spark):
     mobile_orders = extract_sales_data(spark, "data/raw/mobile_orders.csv")
 
     # Union them all together
-    all_orders = online_orders.union(store_orders).union(mobile_orders)
+    all_orders = online_orders.unionByName(store_orders).unionByName(mobile_orders)
 
     logger.info(f"Combined dataset has {all_orders.count()} orders")
     return all_orders
@@ -76,7 +76,7 @@ def clean_price_column(df):
     # Remove dollar signs, commas, and other nonsense
     df_cleaned = df.withColumn(
         "price_cleaned",
-        regexp_replace(col("price"), "[^0-9.]", "")
+        regexp_replace(col("price"), r"[^0-9.\-]", "")
     )
 
     # Convert to decimal, default to 0 if it fails
@@ -102,11 +102,16 @@ def clean_price_column(df):
     return df_flagged.drop("price", "price_cleaned")
 
 def standardize_dates(df):
-    """Parse dates in ISO format (yyyy-MM-dd)"""
+    """Parse dates in multiple common formats"""
+    
+    # Try each format - coalesce returns the first non-null result
+    fmt1 = to_date(col("order_date"), "yyyy-MM-dd")
+    fmt2 = to_date(col("order_date"), "MM/dd/yyyy")
+    fmt3 = to_date(col("order_date"), "dd-MM-yyyy")
     
     df_parsed = df.withColumn(
         "order_date_parsed",
-        to_date(col("order_date"), "yyyy-MM-dd")
+        coalesce(fmt1, fmt2, fmt3)
     )
     
     # Check how many we couldn't parse
