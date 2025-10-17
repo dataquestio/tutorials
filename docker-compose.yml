@@ -1,0 +1,8 @@
+services:
+  lab:
+    build:
+      dockerfile: Dockerfile
+    network_mode: host
+    volumes:
+      - ./:/tutorials
+    command: /bin/bash
