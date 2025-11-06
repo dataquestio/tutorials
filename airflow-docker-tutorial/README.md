@@ -128,14 +128,3 @@ Otherwise, prefer a soft stop:
 docker compose down
 ```
 
-## Next Steps
-
-In [Part Two](https://www.notion.so/Running-and-Managing-Apache-Airflow-with-Docker-Part-II-29b9261be4df80b5b580e723a525de13?pvs=21),
-you’ll extend this setup to:
-
-* Load data into MySQL
-* Manage credentials through Airflow Connections
-* Integrate Git for DAG versioning
-* Automate deployments using CI/CD pipelines
-
-
