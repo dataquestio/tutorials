@@ -1,130 +1,132 @@
 
-# Running and Managing Apache Airflow with Docker — Part One
+# Running and Managing Apache Airflow with Docker
 
-This project contains the full solution for **Part One** of the *Running and Managing Apache Airflow with Docker* tutorial.
+This project contains the complete setup and example DAGs for the **Running and Managing Apache Airflow with Docker** tutorial series (Part One and Part Two).
 
-It walks through:
-- Setting up Apache Airflow inside Docker using `docker-compose`
-- Understanding the Airflow architecture
-- Writing your first DAG using the **TaskFlow API**
-- Implementing **Dynamic Task Mapping** for parallel processing
+It walks you through building an **end-to-end ETL pipeline** in Airflow — from local setup to database integration and version-controlled deployment.
 
+---
 
 ## Overview
 
-In this hands-on project, you’ll learn how to:
+You’ll learn how to:
 
-1. Run Airflow locally using Docker Compose
-2. Create and register your first DAG
-3. Define tasks using the TaskFlow API
-4. Use dynamic task mapping to process multiple markets in parallel
+* Run **Apache Airflow** locally using **Docker Compose**
+* Understand the **core components** of Airflow (Scheduler, Webserver, Workers, Triggerer, Metadata DB)
+* Build and deploy your first DAG using the **TaskFlow API**
+* Implement **Dynamic Task Mapping** to process multiple datasets in parallel
+* Extend your pipeline with a **Load** step that writes data into **MySQL**
+* Configure secure database connections using **Airflow Connections**
+* Enable **Git-based DAG synchronization** with `git-sync`
+* Automate DAG validation using **GitHub Actions (CI/CD)**
 
+---
 
 ## Prerequisites
 
-Before starting, ensure you have:
+Before starting, make sure you have:
 
-- [Docker Desktop](https://www.dataquest.io/blog/setting-up-your-data-engineering-lab-with-docker/)
-- [Python 3.10+](https://www.python.org/downloads/)
-- A code editor like VS Code
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+* [Python 3.10+](https://www.python.org/downloads/)
+* A code editor such as **VS Code**
 
+---
 
-## Setup Instructions
+## Quick Start
 
-### 1. Create the Project Folder
-
-```bash
-mkdir airflow-docker && cd airflow-docker
-````
-
-### 2. Download the Official Airflow Docker Compose File
+### 1. Clone the Repository
 
 ```bash
-curl -LfO 'https://airflow.apache.org/docs/apache-airflow/3.0.1/docker-compose.yaml'
+git clone git@github.com:dataquestio/tutorials.git
+cd airflow-docker-tutorial
 ```
 
-### 3. Create Required Directories
+> The `solution` folder contains the complete DAGs for both tutorials.
+> You’ll work primarily in the **airflow-docker-tutorial** directory.
+
+### 2. Explore the Setup
+
+Inside this directory, you’ll find the preconfigured `docker-compose.yaml` file that defines all Airflow services.
+
+You’ll also create the following subfolders as you progress through the tutorial:
 
 ```bash
 mkdir -p ./dags ./logs ./plugins ./config
 ```
 
-### 4. Initialize the Metadata Database
+### 3. Initialize and Start Airflow
 
 ```bash
 docker compose up airflow-init
-```
-
-### 5. Start Airflow
-
-```bash
 docker compose up -d
 ```
 
-Access the Web UI at [http://localhost:8080](http://localhost:8080)
-Default credentials:
+Access the Airflow Web UI at [http://localhost:8080](http://localhost:8080)
 
-* Username: `airflow`
-* Password: `airflow`
+**Credentials**
 
-
-## Working with DAGs
-
-Place your DAG inside the `dags/` folder.
-This solution’s DAG file is located under `src/our_first_dag.py`.
-
-You can copy it into your project using:
-
-```bash
-cp src/our_first_dag.py dags/
+```
+Username: airflow
+Password: airflow
 ```
 
-Then, restart Airflow:
+---
 
-```bash
-docker compose down -v
-docker compose up -d
+## Example DAGs
+
+### `daily_etl_pipeline_airflow3`
+
+Demonstrates an end-to-end ETL flow with:
+
+* **Extract:** Generate mock market data for multiple regions (`us`, `europe`, `asia`, `africa`)
+* **Transform:** Clean and identify top gainers and losers per region
+* **Load:** Insert transformed data into a local **MySQL** database
+* **Dynamic Task Mapping:** Automatically parallelize extract/transform/load per region
+
+Transformed files are saved under `/opt/airflow/tmp/`
+and loaded into MySQL tables named:
+
+```
+transformed_market_data_us
+transformed_market_data_europe
+transformed_market_data_asia
+transformed_market_data_africa
 ```
 
-## DAG Overview
+---
 
-The DAG `daily_etl_pipeline_airflow3` demonstrates:
+## Version Control & Automation
 
-* **Extraction:** Simulating market data generation
-* **Transformation:** Cleaning and analyzing data per market
-* **Dynamic Task Mapping:** Running multiple markets in parallel (`us`, `europe`, `asia`, `africa`)
+In Part Two, you’ll integrate:
 
-Each run produces transformed CSVs under `/opt/airflow/tmp/`.
+* **Git-Sync:** Automatically sync DAGs from your GitHub repo into Airflow
+* **GitHub Actions:** Validate DAG syntax before deployment
 
-## Project Flow
+This mirrors how production data teams manage and deploy Airflow pipelines safely and collaboratively.
 
-1. **Extract Market Data:**
-   Generates synthetic stock data for several regions.
-2. **Transform Market Data:**
-   Sorts and identifies top-performing companies per region.
-3. **Dynamic Task Mapping:**
-   Uses `.expand()` to create one task per market dynamically.
-
-
-## Visualizing the DAG
-
-Once deployed, navigate to [http://localhost:8080](http://localhost:8080), open your DAG, and trigger a manual run.
-
-In **Graph View**, you’ll see four parallel branches — one for each market region.
-
+---
 
 ## Resetting the Environment
 
-To cleanly stop and reset your containers:
-
-```bash
-docker compose down -v
-```
-
-Use this **only** if the environment is misconfigured.
-Otherwise, prefer a soft stop:
+To stop containers cleanly:
 
 ```bash
 docker compose down
 ```
+
+To remove all data and start fresh (including connections and logs):
+
+```bash
+docker compose down -v
+```
+
+---
+
+## Next Steps
+
+* Explore `dags/our_first_dag.py` to see how tasks are defined with the TaskFlow API
+* Modify the DAG to connect to your own data sources or cloud-hosted MySQL
+* Continue to the next tutorial to add API extraction, alerts, and full CI/CD deployment
+
+---
 
