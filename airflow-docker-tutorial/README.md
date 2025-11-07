@@ -41,7 +41,7 @@ git clone git@github.com:dataquestio/tutorials.git
 cd airflow-docker-tutorial
 ```
 
-> The `solution` folder contains the complete DAGs for both tutorials.
+> The `part-one` and `part-two` folders contain the complete DAGs for both tutorials.
 > You’ll work primarily in the **airflow-docker-tutorial** directory.
 
 ### 2. Explore the Setup
