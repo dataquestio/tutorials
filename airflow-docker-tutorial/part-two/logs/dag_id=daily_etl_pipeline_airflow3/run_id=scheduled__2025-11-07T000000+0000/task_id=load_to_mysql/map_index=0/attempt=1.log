@@ -1,0 +1,4 @@
+{"timestamp":"2025-11-07T10:18:48.507645","level":"info","event":"DAG bundles loaded: dags-folder","logger":"airflow.dag_processing.bundles.manager.DagBundlesManager"}
+{"timestamp":"2025-11-07T10:18:48.509596","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/our_first_dag.py","logger":"airflow.models.dagbag.DagBag"}
+{"timestamp":"2025-11-07T10:18:53.052248Z","level":"info","event":"[LOAD] Data successfully loaded into MySQL table: transformed_market_data_us","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-07T10:18:53.052769","level":"info","event":"Done. Returned value was: None","logger":"airflow.task.operators.airflow.providers.standard.decorators.python._PythonDecoratedOperator"}
