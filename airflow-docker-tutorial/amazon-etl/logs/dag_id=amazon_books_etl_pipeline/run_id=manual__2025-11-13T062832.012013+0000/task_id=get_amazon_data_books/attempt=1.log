@@ -1,0 +1,25 @@
+{"timestamp":"2025-11-13T06:28:34.432138","level":"info","event":"DAG bundles loaded: dags-folder","logger":"airflow.dag_processing.bundles.manager.DagBundlesManager"}
+{"timestamp":"2025-11-13T06:28:34.435180","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/amazon_etl_dag.py","logger":"airflow.models.dagbag.DagBag"}
+{"timestamp":"2025-11-13T06:28:39.336211Z","level":"info","event":"📖 Fetching page 1...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:28:42.259399Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:28:43.985540Z","level":"info","event":"📖 Fetching page 2...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:28:46.616119Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:28:48.825852Z","level":"info","event":"📖 Fetching page 3...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:28:52.075370Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:28:53.821457Z","level":"info","event":"📖 Fetching page 4...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:28:56.386195Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:28:58.248389Z","level":"info","event":"📖 Fetching page 5...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:01.420369Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:02.945015Z","level":"info","event":"📖 Fetching page 6...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:06.259078Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:08.724189Z","level":"info","event":"📖 Fetching page 7...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:11.460134Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:13.300206Z","level":"info","event":"📖 Fetching page 8...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:15.594994Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:18.412072Z","level":"info","event":"📖 Fetching page 9...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:20.731200Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:23.428860Z","level":"info","event":"📖 Fetching page 10...","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:26.549556Z","level":"info","event":"✅ Collected 0 books so far.","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:28.275940Z","level":"info","event":"[EXTRACT] Saved 0 books at /opt/airflow/tmp/amazon_books_raw.csv","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T06:29:28.283908","level":"info","event":"Done. Returned value was: /opt/airflow/tmp/amazon_books_raw.csv","logger":"airflow.task.operators.airflow.providers.standard.decorators.python._PythonDecoratedOperator"}
+{"timestamp":"2025-11-13T06:29:28.287243","level":"info","event":"Pushing xcom","ti":"RuntimeTaskInstance(id=UUID('019a7be6-c2c4-7704-88bb-d3fb880c7557'), task_id='get_amazon_data_books', dag_id='amazon_books_etl_pipeline', run_id='manual__2025-11-13T06:28:32.012013+00:00', try_number=1, map_index=-1, hostname='b0aabf7feffe', context_carrier=None, task=<Task(_PythonDecoratedOperator): get_amazon_data_books>, bundle_instance=LocalDagBundle(name=dags-folder), max_tries=3, start_date=datetime.datetime(2025, 11, 13, 6, 28, 32, 991268, tzinfo=TzInfo(UTC)), end_date=None, state=<TaskInstanceState.RUNNING: 'running'>, is_mapped=False, rendered_map_index=None)","logger":"task"}
