@@ -903,3 +903,4 @@
 {"timestamp":"2025-11-13T14:56:40.413993","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/amazon_etl_dag.py","logger":"airflow.models.dagbag.DagBag"}
 {"timestamp":"2025-11-13T14:57:14.057763","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/amazon_etl_dag.py","logger":"airflow.models.dagbag.DagBag"}
 {"timestamp":"2025-11-13T14:57:47.201244","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/amazon_etl_dag.py","logger":"airflow.models.dagbag.DagBag"}
+{"timestamp":"2025-11-13T14:58:20.122229","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/amazon_etl_dag.py","logger":"airflow.models.dagbag.DagBag"}
