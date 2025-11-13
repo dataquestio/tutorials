@@ -1,0 +1,4 @@
+{"timestamp":"2025-11-13T14:41:31.963729","level":"info","event":"DAG bundles loaded: dags-folder","logger":"airflow.dag_processing.bundles.manager.DagBundlesManager"}
+{"timestamp":"2025-11-13T14:41:31.965242","level":"info","event":"Filling up the DagBag from /opt/airflow/dags/amazon_etl_dag.py","logger":"airflow.models.dagbag.DagBag"}
+{"timestamp":"2025-11-13T14:41:35.446030Z","level":"info","event":"[LOAD] ✅ Data successfully loaded into MySQL table: amazon_books_data","chan":"stdout","logger":"task"}
+{"timestamp":"2025-11-13T14:41:35.446974","level":"info","event":"Done. Returned value was: None","logger":"airflow.task.operators.airflow.providers.standard.decorators.python._PythonDecoratedOperator"}
