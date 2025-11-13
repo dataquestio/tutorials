@@ -2,9 +2,7 @@ services:
   lab:
     build:
       dockerfile: Dockerfile
-    # network_mode: host
-    ports:
-      - "4040:4040"
+    network_mode: host
     volumes:
       - ./:/tutorials
     command: /bin/bash
