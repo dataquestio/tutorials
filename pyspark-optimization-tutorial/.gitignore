@@ -1,0 +1,57 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Spark artifacts
+metastore_db/
+derby.log
+spark-warehouse/
+*.log
+
+# Tutorial-specific: ignore processed outputs but keep raw data
+data/processed/
+data/bad_records/
+solution-files/data/processed/
+solution-files/data/bad_records/
+logs/
+
+# Hadoop/Spark checksum files
+*.crc
+._SUCCESS.crc
+
+# Keep raw sample data
+!data/raw/
+!solution-files/data/raw/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini

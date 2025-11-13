@@ -1,8 +1,8 @@
 services:
   lab:
     build:
+      context: ..  # Parent directory
       dockerfile: Dockerfile
-    # network_mode: host
     ports:
       - "4040:4040"
     volumes:
