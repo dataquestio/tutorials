@@ -1,0 +1,30 @@
+order_id,customer_id,product_name,price,quantity,order_date,region
+MOB_3001,CUST_8821,Whole Wheat Tortillas,3.99,2,2024-10-15,North
+MOB_3002,1923,Hummus,$5.50,1,2024-10-16,South
+MOB_3003,CUST_4512,Salsa,$3.25,2,2024-10-17,East
+MOB_3004,7634,Guacamole,4.99,1,2024-10-18,West
+MOB_3005,CUST_9123,Tortilla Chips,$2.99,3,2024-10-19,North
+MOB_3006,2345,Black Beans,1.50,4,2024-10-20,South
+MOB_3007,CUST_5678,Rice,$12.99,1,2024-10-21,East
+MOB_3008,8901,Sour Cream,3.75,2,2024-10-22,West
+MOB_3009,CUST_3456,Shredded Cheese,$4.50,1,2024-10-23,North
+MOB_3010,6789,Ground Beef,$9.99,1,2024-10-24,South
+MOB_3011,TEST_ORDER,This should be removed,$0.01,999,2024-10-24,Test
+MOB_3012,CUST_1234,Taco Shells,2.99,2,2024-10-25,East
+MOB_3013,4567,Hot Sauce,$1.99,1,2024-10-26,West
+MOB_3014,CUST_7890,Cilantro,1.25,3,2024-10-27,North
+MOB_3015,9012,Lime Juice,$2.50,2,2024-10-28,South
+MOB_3016,CUST_2346,Jalapeños,1.99,4,2024-10-29,East
+MOB_3017,5679,Onion,$0.99,5,2024-10-30,West
+MOB_3018,CUST_8902,Garlic,1.50,2,2024-10-31,North
+MOB_3019,3457,Tomato Paste,$1.75,3,2024-11-01,South
+MOB_3020,CUST_6781,Chicken Thighs,$7.99,2,2024-11-02,East
+MOB_3021,1235,Corn Tortillas,2.99,2,2024-11-03,West
+MOB_3022,CUST_4569,Pinto Beans,$1.50,4,2024-11-04,North
+MOB_3023,7892,Refried Beans,2.25,3,2024-11-05,South
+MOB_3024,CUST_9014,Enchilada Sauce,$3.99,1,2024-11-06,East
+MOB_3025,2347,Flour,$4.50,1,2024-11-07,West
+MOB_3026,CUST_5680,Baking Powder,$2.99,1,2024-11-08,North
+MOB_3001,CUST_8821,Whole Wheat Tortillas,3.99,2,2024-10-15,North
+MOB_3027,8903,Sugar,$3.50,2,2024-11-09,South
+MOB_3028,,Salt,1.99,1,2024-11-10,East

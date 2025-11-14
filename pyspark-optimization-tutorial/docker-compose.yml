@@ -1,0 +1,10 @@
+services:
+  lab:
+    build:
+      context: ..  # Parent directory
+      dockerfile: Dockerfile
+    ports:
+      - "4040:4040"
+    volumes:
+      - ./:/tutorials
+    command: /bin/bash
