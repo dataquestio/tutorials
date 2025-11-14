@@ -66,7 +66,7 @@ def main():
         logger.info("Press Enter when done exploring (Ctrl+C to skip)...")
         try:
             input()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             pass
         
     except Exception as e:

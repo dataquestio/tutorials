@@ -19,32 +19,25 @@ ENV/
 *.swp
 *.swo
 *~
-.DS_Store
 
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
 
-# Spark artifacts
+# Spark/Hadoop artifacts
 metastore_db/
 derby.log
 spark-warehouse/
-*.log
-
-# Tutorial-specific: ignore processed outputs but keep raw data
-data/processed/
-data/bad_records/
-solution-files/data/processed/
-solution-files/data/bad_records/
-logs/
-
-# Hadoop/Spark checksum files
 *.crc
 ._SUCCESS.crc
 
-# Keep raw sample data
-!data/raw/
-!solution-files/data/raw/
+# Logs
+*.log
+logs/
+
+# Generated/processed data (keep raw sample data)
+**/data/processed/
+**/data/bad_records/
 
 # macOS
 .DS_Store

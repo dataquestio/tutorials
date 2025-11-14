@@ -24,6 +24,8 @@ def main():
     
     start_time = datetime.now()
     
+    spark = None  # Initialize to None for safe cleanup
+    
     try:
         # Initialize Spark with minimal configuration
         spark = create_spark_session()
@@ -59,7 +61,7 @@ def main():
         logger.info("Press Enter when done exploring (Ctrl+C to skip)...")
         try:
             input()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, EOFError):
             pass
         
     except Exception as e:
@@ -67,8 +69,9 @@ def main():
         raise
 
     finally:
-        spark.stop()
-        logger.info("Spark session closed")
+        if spark is not None:
+            spark.stop()
+            logger.info("Spark session closed")
 
 if __name__ == "__main__":
     main()
