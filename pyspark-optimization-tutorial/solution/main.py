@@ -23,6 +23,8 @@ def main():
     logger.info("Starting Grocery ETL Pipeline - Baseline Version")
     
     start_time = datetime.now()
+
+    spark = None  # Initialize to None for safe cleanup
     
     try:
         # Initialize Spark with minimal configuration
@@ -74,8 +76,9 @@ def main():
         raise
 
     finally:
-        spark.stop()
-        logger.info("Spark session closed")
+        if spark is not None:
+            spark.stop()
+            logger.info("Spark session closed")
 
 if __name__ == "__main__":
     main()
