@@ -57,8 +57,10 @@ x-airflow-common:
     AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    # AIRFLOW__CELERY__BROKER_URL: redis://:@redis:6379/0
     AIRFLOW__CORE__FERNET_KEY: ''
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags/git-sync/current/dags
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     # yamllint disable rule:line-length
@@ -72,13 +74,15 @@ x-airflow-common:
     # The following line can be used to set a custom config file, stored in the local config folder
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
-    - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
+    - airflow-dags-volume:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
+    # redis:
+    #   condition: service_healthy
     postgres:
       condition: service_healthy
 
@@ -97,7 +101,46 @@ services:
       retries: 5
       start_period: 5s
     restart: always
+  
+  git-sync:
+    image: registry.k8s.io/git-sync/git-sync:v4.1.0
+    user: "0:0"    # run as root so it can create /dags/git-sync
+    restart: always
+    environment:
+      GITSYNC_REPO: "https://github.com/<your-username>/airflow-dags.git"
+      GITSYNC_BRANCH: "main"           # use BRANCH not REF
+      GITSYNC_PERIOD: "30s"
+      GITSYNC_DEPTH: "1"
+      GITSYNC_ROOT: "/dags/git-sync"
+      GITSYNC_DEST: "repo"
+      GITSYNC_LINK: "current"
+      GITSYNC_ONE_TIME: "false"
+      GITSYNC_ADD_USER: "true"
+      GITSYNC_CHANGE_PERMISSIONS: "1"
+      GITSYNC_STALE_WORKTREE_TIMEOUT: "24h"
+    volumes:
+      - airflow-dags-volume:/dags
+    healthcheck:
+      test: ["CMD-SHELL", "test -L /dags/git-sync/current && test -d /dags/git-sync/current/dags && [ \"$(ls -A /dags/git-sync/current/dags 2>/dev/null)\" ]"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
+
+  # redis:
+  #   # Redis is limited to 7.2-bookworm due to licencing change
+  #   # https://redis.io/blog/redis-adopts-dual-source-available-licensing/
+  #   image: redis:7.2-bookworm
+  #   expose:
+  #     - 6379
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 30s
+  #     retries: 50
+  #     start_period: 30s
+  #   restart: always
 
   airflow-apiserver:
     <<: *airflow-common
@@ -115,6 +158,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+      git-sync:
+        condition: service_healthy
 
   airflow-scheduler:
     <<: *airflow-common
@@ -130,6 +175,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+      git-sync:
+        condition: service_healthy
 
   airflow-dag-processor:
     <<: *airflow-common
@@ -145,6 +192,33 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+      git-sync:
+        condition: service_healthy
+
+  # airflow-worker:
+  #   <<: *airflow-common
+  #   command: celery worker
+  #   healthcheck:
+  #     # yamllint disable rule:line-length
+  #     test:
+  #       - "CMD-SHELL"
+  #       - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   environment:
+  #     <<: *airflow-common-env
+  #     # Required to handle warm shutdown of the celery workers properly
+  #     # See https://airflow.apache.org/docs/docker-stack/entrypoint.html#signal-propagation
+  #     DUMB_INIT_SETSID: "0"
+  #   restart: always
+  #   depends_on:
+  #     <<: *airflow-common-depends-on
+  #     airflow-apiserver:
+  #       condition: service_healthy
+  #     airflow-init:
+  #       condition: service_completed_successfully
 
   airflow-triggerer:
     <<: *airflow-common
@@ -160,6 +234,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+      git-sync:
+        condition: service_healthy
 
   airflow-init:
     <<: *airflow-common
@@ -271,6 +347,25 @@ services:
   # You can enable flower by adding "--profile flower" option e.g. docker-compose --profile flower up
   # or by explicitly targeted on the command line e.g. docker-compose up flower.
   # See: https://docs.docker.com/compose/profiles/
+  # flower:
+  #   <<: *airflow-common
+  #   command: celery flower
+  #   profiles:
+  #     - flower
+  #   ports:
+  #     - "5555:5555"
+  #   healthcheck:
+  #     test: ["CMD", "curl", "--fail", "http://localhost:5555/"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 30s
+  #   restart: always
+  #   depends_on:
+  #     <<: *airflow-common-depends-on
+  #     airflow-init:
+  #       condition: service_completed_successfully
 
 volumes:
   postgres-db-volume:
+  airflow-dags-volume:

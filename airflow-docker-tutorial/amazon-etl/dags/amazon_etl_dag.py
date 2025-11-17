@@ -48,11 +48,11 @@ def amazon_books_etl():
             try:
                 response = requests.get(url, headers=headers, timeout=15)
             except requests.RequestException as e:
-                print(f"⚠️ Request failed: {e}")
+                print(f"Request failed: {e}")
                 break
 
             if response.status_code != 200:
-                print(f"⚠️ Failed to retrieve page {page} (status {response.status_code})")
+                print(f"Failed to retrieve page {page} (status {response.status_code})")
                 break
 
             soup = BeautifulSoup(response.text, "html.parser")
@@ -115,7 +115,7 @@ def amazon_books_etl():
             ti.xcom_push(key='df_summary', value=formatted_summary)
             print("[XCOM] Pushed cleaned data summary to XCom.")
 
-        print("\n📘 Preview of Extracted Data:")
+        print("\n Preview of Extracted Data:")
         print(df.head(5).to_string(index=False))
 
         return raw_path
@@ -125,7 +125,7 @@ def amazon_books_etl():
     @task
     def transform_amazon_books(raw_file: str):
         if not os.path.exists(raw_file):
-            raise FileNotFoundError(f"❌ Raw file not found: {raw_file}")
+            raise FileNotFoundError(f"Raw file not found: {raw_file}")
 
         df = pd.read_csv(raw_file)
         print(f"[TRANSFORM] Loaded {len(df)} records from raw dataset.")
@@ -178,7 +178,7 @@ def amazon_books_etl():
         df = pd.read_csv(transformed_file)
         table_name = "amazon_books_data"
 
-        # ✅ Replace NaN with None (important for MySQL compatibility)
+        # Replace NaN with None (important for MySQL compatibility)
         df = df.replace({np.nan: None})
 
         conn = mysql.connector.connect(**db_config)
@@ -207,7 +207,7 @@ def amazon_books_etl():
 
         conn.commit()
         conn.close()
-        print(f"[LOAD] ✅ Data successfully loaded into MySQL table: {table_name}")
+        print(f"[LOAD] Data successfully loaded into MySQL table: {table_name}")
 
 
 
