@@ -1,0 +1,27 @@
+name: Validate Airflow DAGs
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'dags/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Airflow
+        run: pip install apache-airflow==3.1.1
+
+      - name: Validate DAGs
+        run: |
+          echo "Validating DAG syntax..."
+          airflow dags list || exit 1
