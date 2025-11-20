@@ -1,69 +1,76 @@
 
-# Running and Managing Apache Airflow with Docker
 
-This project contains the complete setup and example DAGs for the **Running and Managing Apache Airflow with Docker** tutorial series (Part One and Part Two).
+# Amazon ETL with Apache Airflow + Docker
 
-It walks you through building an **end-to-end ETL pipeline** in Airflow — from local setup to database integration and version-controlled deployment.
-
----
-
-## Overview
-
-You’ll learn how to:
-
-* Run **Apache Airflow** locally using **Docker Compose**
-* Understand the **core components** of Airflow (Scheduler, Webserver, Workers, Triggerer, Metadata DB)
-* Build and deploy your first DAG using the **TaskFlow API**
-* Implement **Dynamic Task Mapping** to process multiple datasets in parallel
-* Extend your pipeline with a **Load** step that writes data into **MySQL**
-* Configure secure database connections using **Airflow Connections**
-* Enable **Git-based DAG synchronization** with `git-sync`
-* Automate DAG validation using **GitHub Actions (CI/CD)**
+This repository contains the full project used in the **Amazon ETL with Apache Airflow and Docker** tutorial series.
+It demonstrates a complete **end-to-end ETL workflow** using Apache Airflow, Docker, and MySQL — from local development all the way to cloud-ready deployment patterns.
 
 ---
 
-## Prerequisites
+## Project Structure
 
-Before starting, make sure you have:
+* **`amazon-docker-tutorial/`** — The primary project folder containing the full Airflow setup used in Part One and Part Two of the tutorial.
 
-* [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-* [Python 3.10+](https://www.python.org/downloads/)
-* A code editor such as **VS Code**
+You’ll find three main subdirectories:
+
+* **`part-one/`** — The complete DAGs and configuration for the first part of the tutorial.
+* **`part-two/`** — Git-based DAG syncing, CI validation, and lightweight deployment automation.
+* **`amazon-etl/`** — The Amazon scraping + transformation code used for the real-world ETL example.
 
 ---
 
-## Quick Start
+##  What’s Included
 
-### 1. Clone the Repository
+Inside `amazon-docker-tutorial/` you’ll find:
+
+* **`docker-compose.yaml`** – A fully configured Airflow environment (api-server, scheduler, triggerer, DAG processor, metadata DB, logs).
+
+
+The project walks through:
+
+* Running Airflow inside Docker Compose
+* Scraping real Amazon book data
+* Transforming messy HTML output into clean analytics data
+* Loading data into MySQL
+* Syncing DAGs from GitHub using `git-sync`
+* Lightweight CI for validating DAGs on every push
+
+---
+
+## How to Run the Project
+
+Clone the repository:
 
 ```bash
 git clone git@github.com:dataquestio/tutorials.git
-cd airflow-docker-tutorial
+cd amazon-docker-tutorial
 ```
 
-> The `part-one` and `part-two` folders contain the complete DAGs for both tutorials.
-> You’ll work primarily in the **airflow-docker-tutorial** directory.
-
-### 2. Explore the Setup
-
-Inside this directory, you’ll find the preconfigured `docker-compose.yaml` file that defines all Airflow services.
-
-You’ll also create the following subfolders as you progress through the tutorial:
+Create required folders:
 
 ```bash
 mkdir -p ./dags ./logs ./plugins ./config
 ```
 
-### 3. Initialize and Start Airflow
+Initialize Airflow:
 
 ```bash
 docker compose up airflow-init
+```
+
+Start all services:
+
+```bash
 docker compose up -d
 ```
 
-Access the Airflow Web UI at [http://localhost:8080](http://localhost:8080)
+Access the Airflow UI:
 
-**Credentials**
+```
+http://localhost:8080
+```
+
+**Credentials:**
 
 ```
 Username: airflow
@@ -74,47 +81,39 @@ Password: airflow
 
 ## Example DAGs
 
-### `daily_etl_pipeline_airflow3`
+### `amazon_books_etl`
 
-Demonstrates an end-to-end ETL flow with:
+A real-world ETL pipeline that:
 
-* **Extract:** Generate mock market data for multiple regions (`us`, `europe`, `asia`, `africa`)
-* **Transform:** Clean and identify top gainers and losers per region
-* **Load:** Insert transformed data into a local **MySQL** database
-* **Dynamic Task Mapping:** Automatically parallelize extract/transform/load per region
+* **Extracts** book listings from Amazon (title, author, price, rating)
+* **Transforms** the raw HTML data into numeric fields
+* **Loads** the cleaned dataset into a MySQL table
+* Runs automatically on a daily schedule
 
-Transformed files are saved under `/opt/airflow/tmp/`
-and loaded into MySQL tables named:
-
-```
-transformed_market_data_us
-transformed_market_data_europe
-transformed_market_data_asia
-transformed_market_data_africa
-```
+Files are saved to `/opt/airflow/tmp/` inside the container.
 
 ---
 
-## Version Control & Automation
+## Version Control & CI
 
-In Part Two, you’ll integrate:
+You’ll also learn how to:
 
-* **Git-Sync:** Automatically sync DAGs from your GitHub repo into Airflow
-* **GitHub Actions:** Validate DAG syntax before deployment
+* Sync DAGs automatically from GitHub into Airflow using **git-sync**
+* Validate DAG syntax on every push using a lightweight **GitHub Actions** workflow
 
-This mirrors how production data teams manage and deploy Airflow pipelines safely and collaboratively.
+These are production-like patterns for managing Airflow safely and collaboratively.
 
 ---
 
 ## Resetting the Environment
 
-To stop containers cleanly:
+Stop all running containers:
 
 ```bash
 docker compose down
 ```
 
-To remove all data and start fresh (including connections and logs):
+Reset the environment completely (including the metadata database):
 
 ```bash
 docker compose down -v
@@ -124,9 +123,9 @@ docker compose down -v
 
 ## Next Steps
 
-* Explore `dags/our_first_dag.py` to see how tasks are defined with the TaskFlow API
-* Modify the DAG to connect to your own data sources or cloud-hosted MySQL
-* Continue to the next tutorial to add API extraction, alerts, and full CI/CD deployment
+* Explore the main DAG inside `dags/amazon_books_etl.py`
+* Modify the extraction to use different Amazon categories or other sites
+* Try connecting Airflow to cloud services (RDS, S3, ECS)
+* Continue to the cloud deployment tutorial to run Airflow on **Amazon ECR (Fargate)**
 
----
 

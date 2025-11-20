@@ -25,10 +25,9 @@ default_args = {
 def amazon_books_etl():
 
     @task
-    def get_amazon_data_books(num_books=100, max_pages=10, ti=None):
+    def get_amazon_data_books(num_books=50, max_pages=10, ti=None):
         """
-        Extracts Amazon Data Engineering book details such as Title, Author, Price, and Rating.
-        Performs light cleaning to remove duplicates and incomplete records before saving.
+        Extracts Amazon Data Engineering book details such as Title, Author, Price, and Rating. Saves the raw extracted data locally and pushes it to XCom for downstream tasks.
         """
         headers = {
             "Referer": 'https://www.amazon.com/',
@@ -38,9 +37,10 @@ def amazon_books_etl():
             'User-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36'
         }
 
+
         base_url = "https://www.amazon.com/s?k=data+engineering+books"
         books, seen_titles = [], set()
-        page = 1
+        page = 1  # start with page 1
 
         while page <= max_pages and len(books) < num_books:
             url = f"{base_url}&page={page}"
@@ -48,7 +48,7 @@ def amazon_books_etl():
             try:
                 response = requests.get(url, headers=headers, timeout=15)
             except requests.RequestException as e:
-                print(f"Request failed: {e}")
+                print(f" Request failed: {e}")
                 break
 
             if response.status_code != 200:
@@ -64,89 +64,108 @@ def amazon_books_etl():
                 price_tag = book.select_one("span.a-price > span.a-offscreen")
                 rating_tag = book.select_one("span.a-icon-alt")
 
-                # Only add complete and new books
                 if title_tag and price_tag:
                     title = title_tag.text.strip()
-
-                    # Skip duplicates early
-                    if title in seen_titles:
-                        continue
-
-                    seen_titles.add(title)
-
-                    books.append({
-                        "Title": title,
-                        "Author": author_tag.text.strip() if author_tag else "N/A",
-                        "Price": price_tag.text.strip(),
-                        "Rating": rating_tag.text.strip() if rating_tag else "N/A"
-                    })
-
+                    if title not in seen_titles:
+                        seen_titles.add(title)
+                        books.append({
+                            "Title": title,
+                            "Author": author_tag.text.strip() if author_tag else "N/A",
+                            "Price": price_tag.text.strip(),
+                            "Rating": rating_tag.text.strip() if rating_tag else "N/A"
+                        })
             if len(books) >= num_books:
                 break
 
             page += 1
-            time.sleep(random.uniform(1.5, 3.0))  # Respectful delay
+            time.sleep(random.uniform(1.5, 3.0))
 
-        # --- Final cleanup before saving ---
+        # Convert to DataFrame
         df = pd.DataFrame(books)
-
-        # Remove duplicates (just in case) and empty titles or prices
-        df.dropna(subset=["Title", "Price"], inplace=True)
         df.drop_duplicates(subset="Title", inplace=True)
 
-        # Create directory and save
+    
+        # Create directory for raw data.
+            # Note: This works here because everything runs in one container.
+            # In real deployments, you'd use shared storage (e.g., S3/GCS) instead.
         os.makedirs("/opt/airflow/tmp", exist_ok=True)
         raw_path = "/opt/airflow/tmp/amazon_books_raw.csv"
+
+        # Save the extracted dataset
         df.to_csv(raw_path, index=False)
-
         print(f"[EXTRACT] Amazon book data successfully saved at {raw_path}")
-        print(f"[EXTRACT] {len(df)} valid, unique records extracted across {page} pages.")
 
-        # --- Push metadata to XCom for transform ---
+        # Push DataFrame path to XCom
         import json
+
         summary = {
             "rows": len(df),
             "columns": list(df.columns),
             "sample": df.head(3).to_dict('records'),
         }
+
+        # Clean up non-breaking spaces and format neatly
         formatted_summary = json.dumps(summary, indent=2, ensure_ascii=False).replace('\xa0', ' ')
 
-        if ti:
-            ti.xcom_push(key='df_summary', value=formatted_summary)
-            print("[XCOM] Pushed cleaned data summary to XCom.")
 
-        print("\n Preview of Extracted Data:")
+        if ti:
+            ti.xcom_push(key='df_summary', value= formatted_summary)
+            print("[XCOM] Pushed JSON summary to XCom.")
+
+        # Optional preview
+        print("\nPreview of Extracted Data:")
         print(df.head(5).to_string(index=False))
 
         return raw_path
 
-
-
     @task
     def transform_amazon_books(raw_file: str):
+        """
+        Standardizes the extracted Amazon book dataset for analysis.
+        - Converts price strings (e.g., '$45.99') into numeric values
+        - Extracts numeric ratings (e.g., '4.2' from '4.2 out of 5 stars')
+        - Renames 'Price' to 'Price($)'
+        - Handles missing or unexpected field formats safely
+        - Performs light validation after numeric conversion
+        """
         if not os.path.exists(raw_file):
-            raise FileNotFoundError(f"Raw file not found: {raw_file}")
+            raise FileNotFoundError(f" Raw file not found: {raw_file}")
 
         df = pd.read_csv(raw_file)
         print(f"[TRANSFORM] Loaded {len(df)} records from raw dataset.")
 
-        # --- Price cleaning ---
-        df["Price($)"] = (
-            df["Price"]
-            .str.replace("$", "", regex=False)
-            .str.replace(",", "", regex=False)
-            .str.strip()
-        )
-        df["Price($)"] = pd.to_numeric(df["Price($)"], errors="coerce")
+        # --- Price cleaning (defensive) ---
+        if "Price" in df.columns:
+            df["Price($)"] = (
+                df["Price"]
+                .astype(str)                                   # prevents .str on NaN
+                .str.replace("$", "", regex=False)
+                .str.replace(",", "", regex=False)
+                .str.extract(r"(\d+\.?\d*)")[0]                # safely extract numbers
+            )
+            df["Price($)"] = pd.to_numeric(df["Price($)"], errors="coerce")
+        else:
+            print("[TRANSFORM] Missing 'Price' column — filling with None.")
+            df["Price($)"] = None
 
-        # --- Rating cleaning ---
-        df["Rating"] = df["Rating"].str.extract(r"(\d+\.?\d*)").astype(float)
+        # --- Rating cleaning (defensive) ---
+        if "Rating" in df.columns:
+            df["Rating"] = (
+                df["Rating"]
+                .astype(str)
+                .str.extract(r"(\d+\.?\d*)")[0]
+            )
+            df["Rating"] = pd.to_numeric(df["Rating"], errors="coerce")
+        else:
+            print("[TRANSFORM] Missing 'Rating' column — filling with None.")
+            df["Rating"] = None
 
-        # --- Validation: drop rows with invalid numeric values (optional) ---
+        # --- Validation: drop rows where BOTH fields failed (optional) ---
         df.dropna(subset=["Price($)", "Rating"], how="all", inplace=True)
 
-        # --- Drop original Price column ---
-        df.drop(columns=["Price"], inplace=True)
+        # --- Drop original Price column (if present) ---
+        if "Price" in df.columns:
+            df.drop(columns=["Price"], inplace=True)
 
         # --- Save cleaned dataset ---
         transformed_path = raw_file.replace("raw", "transformed")
@@ -158,15 +177,27 @@ def amazon_books_etl():
 
         return transformed_path
 
+
     @task
     def load_to_mysql(transformed_file: str):
         """
         Loads the transformed Amazon book dataset into a MySQL table for analysis.
+        Uses a truncate-and-load pattern to keep the table idempotent.
         """
         import mysql.connector
         import os
         import numpy as np
 
+        # Note:
+        # For production-ready projects, database credentials should never be hard-coded.
+        # Airflow provides a built-in Connection system and can also integrate with
+        # secret backends (AWS Secrets Manager, Vault, etc.).
+        #
+        # Example (production-ready project):
+        #     hook = MySqlHook(mysql_conn_id="my_mysql_conn")
+        #     conn = hook.get_conn()
+        #
+        # For this demo, we keep a simple local config:
         db_config = {
             "host": "host.docker.internal",
             "user": "airflow",
@@ -184,6 +215,7 @@ def amazon_books_etl():
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
 
+        # Create table if it does not exist
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {table_name} (
                 Title VARCHAR(512),
@@ -192,26 +224,33 @@ def amazon_books_etl():
                 Rating DECIMAL(4,2)
             );
         """)
+        
+        # Truncate table for idempotency
+        cursor.execute(f"TRUNCATE TABLE {table_name};")
 
+        # Insert rows
+        insert_query = f"""
+            INSERT INTO {table_name} (Title, Author, `Price($)`, Rating)
+            VALUES (%s, %s, %s, %s)
+        """
 
-        # Insert each row safely
         for _, row in df.iterrows():
-            cursor.execute(
-                f"""
-                INSERT INTO {table_name} (Title, Author, `Price($)`, Rating)
-                VALUES (%s, %s, %s, %s)
-                """,
-                (row["Title"], row["Author"], row["Price($)"], row["Rating"])
-            )
-
+            try:
+                cursor.execute(
+                    insert_query,
+                    (row["Title"], row["Author"], row["Price($)"], row["Rating"])
+                )
+            except Exception as e:
+                # For demo purposes we simply skip bad rows.
+                # In real pipelines, you'd log or send them to a dead-letter table.
+                print(f"[LOAD] Skipped corrupted row due to error: {e}")
 
         conn.commit()
         conn.close()
-        print(f"[LOAD] Data successfully loaded into MySQL table: {table_name}")
 
+        print(f"[LOAD] Table '{table_name}' refreshed with {len(df)} rows.")
 
-
-    # === Task dependencies ===
+    # Task dependencies 
     raw_file = get_amazon_data_books()
     transformed_file = transform_amazon_books(raw_file)
     load_to_mysql(transformed_file)
