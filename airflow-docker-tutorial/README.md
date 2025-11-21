@@ -3,7 +3,7 @@
 # Amazon ETL with Apache Airflow + Docker
 
 This repository contains the full project used in the **Amazon ETL with Apache Airflow and Docker** tutorial series.
-It demonstrates a complete **end-to-end ETL workflow** using Apache Airflow, Docker, and MySQL, from local development all the way to cloud-like ready deployment patterns.
+It demonstrates a complete **end-to-end ETL workflow** using Apache Airflow, Docker, and MySQL, from local development all the way to production-like ready deployment patterns.
 
 ---
 
