@@ -40,7 +40,7 @@ Output your response as valid JSON with this structure:
   "channel_recommendations": ["string", "string", ...]
 }}
 
-Respond with JSON only. No explanations or markdown.
+Respond with JSON only. No explanations or markdown. Keep each string value to 1–2 sentences max.
 """
 
 def build_campaign_prompt(factsheet):
@@ -75,7 +75,7 @@ Output JSON with this structure:
   "flavor_highlights": ["string", "string", ...],
   "certifications": ["string", "string", ...],
   "price_point": "budget" | "mid-range" | "premium" | "luxury",
-  "scarcity_factors": ["string", ...] or null
+  "scarcity_factors": ["string", ...] // use [] if none
 }}
 
 Respond with JSON only.

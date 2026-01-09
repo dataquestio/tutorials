@@ -12,11 +12,10 @@ def test_basic_generation():
 
     brief = generate_campaign_brief(factsheet)
 
-    # Basic assertions - it works and has required content
     assert brief.campaign_name, "Campaign name missing"
     assert len(brief.campaign_name) >= 5, "Campaign name too short"
     assert brief.target_audience, "Target audience missing"
-    assert brief.campaign_goal in [g.value for g in CampaignGoal], "Invalid campaign goal"
+    assert brief.campaign_goal in CampaignGoal, "Invalid campaign goal"
     assert len(brief.channel_recommendations) > 0, "No channels recommended"
 
     print("✓ Basic generation test passed")
@@ -34,7 +33,6 @@ def test_premium_product_targeting():
 
     brief = generate_campaign_brief(factsheet)
 
-    # Premium products should use sophisticated targeting language
     target = brief.target_audience.lower()
     sophisticated_terms = ['enthusiast', 'connoisseur', 'specialty', 'premium', 'aficionado']
 
