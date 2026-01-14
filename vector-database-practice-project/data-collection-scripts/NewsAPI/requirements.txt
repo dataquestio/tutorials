@@ -1,0 +1,7 @@
+requests
+pandas
+tqdm
+python-dotenv
+trafilatura
+readability-lxml
+beautifulsoup4
