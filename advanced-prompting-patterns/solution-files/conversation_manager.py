@@ -6,7 +6,7 @@ from datetime import datetime
 
 DEFAULT_API_KEY = os.environ.get("TOGETHER_API_KEY")
 DEFAULT_BASE_URL = "https://api.together.xyz/v1"
-DEFAULT_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct-Lite"
+DEFAULT_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct-Lite" # Link to models: https://api.together.ai/models
 DEFAULT_TEMPERATURE = 0.7
 DEFAULT_MAX_TOKENS = 350
 DEFAULT_TOKEN_BUDGET = 4096
@@ -16,6 +16,11 @@ class ConversationManager:
     def __init__(self, api_key=None, base_url=None, model=None, history_file=None, temperature=None, max_tokens=None, token_budget=None):
         if not api_key:
             api_key = DEFAULT_API_KEY
+            if not api_key:
+                raise ValueError(
+                    "TOGETHER_API_KEY environment variable is not set. "
+                    "Please set it or pass an api_key directly to ConversationManager."
+                )
         if not base_url:
             base_url = DEFAULT_BASE_URL
             
