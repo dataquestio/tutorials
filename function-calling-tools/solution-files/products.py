@@ -48,12 +48,12 @@ def calculate_bulk_price(product_id: str, quantity: int) -> dict:
     else:
         discount = Decimal("0")
 
-    unit_price = base_price * (1 - discount)
+    unit_price = base_price * (Decimal("1") - discount)
     total_price = unit_price * quantity
 
     return {
         "quantity": quantity,
-        "discount_percent": float(discount * 100),
-        "unit_price": float(unit_price),
-        "total_price": float(total_price)
+        "discount_percent": discount * 100,
+        "unit_price": unit_price,
+        "total_price": total_price
     }
