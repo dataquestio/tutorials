@@ -2,7 +2,6 @@ import os
 import json
 import chromadb
 import cohere
-import tiktoken
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -12,7 +11,6 @@ co = cohere.Client(api_key=os.getenv("COHERE_API_KEY"))
 oai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 client = chromadb.PersistentClient(path="data/chroma_scoped")
 collection = client.get_collection(name="git_docs_scoped")
-enc = tiktoken.encoding_for_model("gpt-4o-mini")
 
 corpus = {}
 with open("data/git_kb_corpus_scoped/corpus.jsonl", "r") as f:
@@ -21,38 +19,16 @@ with open("data/git_kb_corpus_scoped/corpus.jsonl", "r") as f:
         corpus[chunk["chunk_id"]] = chunk
 
 
-EXPANSION_PROMPT = """You are helping improve search over Git documentation.
-
-Given a user's question, generate 2 or 3 alternative phrasings that use
-different vocabulary but ask the same thing. Use terminology that might
-appear in official Git documentation (command names, flags, technical terms).
-
-Return ONLY the alternative phrasings, one per line, with no numbering,
-no bullet points, no explanation, and no blank lines.
-
-User question: {query}"""
-
-
-def expand_query(query):
-    response = oai.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": EXPANSION_PROMPT.format(query=query)}],
-        temperature=0.3
-    )
-    raw = response.choices[0].message.content.strip()
-    return [line.strip() for line in raw.split("\n") if line.strip()]
-
-
-def retrieve(query, n_results=10):
+def retrieve(query, n_results=5):
     response = co.embed(
         texts=[query],
         model="embed-v4.0",
         input_type="search_query",
         embedding_types=["float"]
     )
-    embedding = response.embeddings.float[0]
+    query_embedding = response.embeddings.float[0]
     results = collection.query(
-        query_embeddings=[embedding],
+        query_embeddings=[query_embedding],
         n_results=n_results
     )
     chunks = []
@@ -73,64 +49,18 @@ def retrieve(query, n_results=10):
     return chunks
 
 
-def expand_and_retrieve(query, n_results=10):
-    reformulations = expand_query(query)
-    all_queries = [query] + reformulations
-    seen = {}
-    for q in all_queries:
-        for chunk in retrieve(q, n_results=n_results):
-            cid = chunk["chunk_id"]
-            if cid not in seen or chunk["distance"] < seen[cid]["distance"]:
-                seen[cid] = chunk
-    return sorted(seen.values(), key=lambda x: x["distance"])
-
-
-def rerank(query, chunks, top_n=5):
-    documents = [c["text"] for c in chunks]
-    response = co.rerank(
-        model="rerank-v3.5",
-        query=query,
-        documents=documents,
-        top_n=top_n
-    )
-    reranked = []
-    for result in response.results:
-        chunk = chunks[result.index]
-        reranked.append({
-            **chunk,
-            "rerank_score": result.relevance_score
-        })
-    return reranked
-
-
-def count_tokens(text):
-    return len(enc.encode(text))
-
-
 def build_context(chunks):
-    parts = []
-    for chunk in chunks:
-        parts.append(
+    context_parts = []
+    for i, chunk in enumerate(chunks, start=1):
+        context_parts.append(
+            f"[SOURCE {i}]\n"
             f"chunk_id: {chunk['chunk_id']}\n"
             f"title: {chunk['title']}\n"
             f"source_type: {chunk['source_type']}\n"
             f"command: {chunk['command']}\n\n"
             f"{chunk['text']}"
         )
-    return "\n\n---\n\n".join(parts)
-
-
-def select_chunks_within_budget(chunks, token_budget=6000):
-    selected = []
-    used = 0
-    for chunk in chunks:
-        chunk_tokens = count_tokens(build_context([chunk]))
-        if used + chunk_tokens <= token_budget:
-            selected.append(chunk)
-            used += chunk_tokens
-        else:
-            break
-    return selected
+    return "\n\n---\n\n".join(context_parts)
 
 
 SYSTEM_PROMPT = """You are GitQuest, a Git support agent that helps \
@@ -176,11 +106,9 @@ def parse_citations(raw_answer, retrieved_chunks):
     return cited
 
 
-def ask_gitquest(query, n_results=10, token_budget=6000):
-    candidates = expand_and_retrieve(query, n_results=n_results)
-    reranked = rerank(query, candidates, top_n=5)
-    final_chunks = select_chunks_within_budget(reranked, token_budget=token_budget)
-    context = build_context(final_chunks)
+def ask_gitquest(query, n_results=5):
+    chunks = retrieve(query, n_results=n_results)
+    context = build_context(chunks)
     response = oai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -192,13 +120,12 @@ def ask_gitquest(query, n_results=10, token_budget=6000):
         ]
     )
     raw_answer = response.choices[0].message.content
-    citations = parse_citations(raw_answer, final_chunks)
+    citations = parse_citations(raw_answer, chunks)
     answer_text = raw_answer.split("SOURCES:")[0].strip()
 
     return {
         "query": query,
         "answer": answer_text,
         "citations": citations,
-        "retrieved_chunks": final_chunks,
-        "candidate_count": len(candidates)
+        "retrieved_chunks": chunks
     }

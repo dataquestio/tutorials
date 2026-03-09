@@ -63,25 +63,6 @@ def build_context(chunks):
     return "\n\n---\n\n".join(context_parts)
 
 
-def parse_citations(raw_answer, retrieved_chunks):
-    valid_ids = {c["chunk_id"] for c in retrieved_chunks}
-    cited = []
-    if "SOURCES:" in raw_answer:
-        sources_section = raw_answer.split("SOURCES:")[1]
-        for line in sources_section.strip().split("\n"):
-            if "chunk_id:" in line:
-                cited_id = line.split("chunk_id:")[1].split("|")[0].strip()
-                if cited_id in valid_ids:
-                    chunk = corpus[cited_id]
-                    cited.append({
-                        "chunk_id": cited_id,
-                        "title": chunk["title"],
-                        "command": chunk["command"],
-                        "source_type": chunk["source_type"]
-                    })
-    return cited
-
-
 SYSTEM_PROMPT = """You are GitQuest, a Git support agent that helps \
 developers use Git correctly and confidently.
 
@@ -104,6 +85,25 @@ SOURCES:
 
 Documentation:
 {context}"""
+
+
+def parse_citations(raw_answer, retrieved_chunks):
+    valid_ids = {c["chunk_id"] for c in retrieved_chunks}
+    cited = []
+    if "SOURCES:" in raw_answer:
+        sources_section = raw_answer.split("SOURCES:")[1]
+        for line in sources_section.strip().split("\n"):
+            if "chunk_id:" in line:
+                cited_id = line.split("chunk_id:")[1].split("|")[0].strip()
+                if cited_id in valid_ids:
+                    chunk = corpus[cited_id]
+                    cited.append({
+                        "chunk_id": cited_id,
+                        "title": chunk["title"],
+                        "command": chunk["command"],
+                        "source_type": chunk["source_type"]
+                    })
+    return cited
 
 
 def ask_gitquest(query, n_results=5):
