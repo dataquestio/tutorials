@@ -2,6 +2,7 @@ import os
 import json
 import chromadb
 import cohere
+import tiktoken
 from openai import OpenAI
 from dotenv import load_dotenv
 
