@@ -6,7 +6,7 @@ Walkthrough of evidence-aware LLM-as-judge calibration. This driver:
 2. Scores each example with the deterministic heuristic_judge (so the lesson
    runs offline by default).
 3. Scores each example with the live llm_judge when an OpenAI client is
-   available, so the author can demonstrate the calibration delta.
+   available to demonstrate the calibration delta in the lesson.
 4. Prints a side-by-side comparison plus a pass/partial/fail summary.
 
 The judge implementation itself lives in tutorials/advanced-rag/_shared/judge.py

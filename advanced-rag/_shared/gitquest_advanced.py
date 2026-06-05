@@ -176,7 +176,12 @@ def default_config():
 
 
 def build_run_log(query_id, outcome, config, metrics, pipeline_version=PIPELINE_VERSION, run_id=None):
-    """Emit the canonical 15-field Run Log entry shared by AR3 and AR4."""
+    """Emit the canonical 15-field Run Log entry shared by AR3 and AR4.
+
+    The returned dict shape is the Run Log contract documented in
+    rag_dataset_eval_requirements.md. AR3 (monitoring.py) and EO3
+    (compare_runs.py) read every field by name; do not rename or drop
+    fields without updating both downstream consumers."""
     if run_id is None:
         run_id = "run_" + uuid.uuid4().hex[:12]
     return {
@@ -199,7 +204,11 @@ def build_run_log(query_id, outcome, config, metrics, pipeline_version=PIPELINE_
 
 def offline_generate(query, chunks, expected_behavior=None):
     """Deterministic stand-in for the LLM. Used when no API key is available
-    or when a notebook needs a stable, reproducible answer."""
+    or when a notebook needs a stable, reproducible answer.
+
+    This is intentionally a stub, not a "missing" LLM call. Lessons that
+    want live generation pass an OpenAI-backed callable via the
+    `generator` argument to AdvancedGitQuest."""
     if expected_behavior == "refuse":
         return (
             "The available Git documentation does not contain enough information "

@@ -19,6 +19,11 @@ changing downstream code:
       "refusal_correctness": 1..5 | "not_applicable",
       "rationale": "..."
     }
+
+The two callables MUST return the same shape. If you add a dimension to
+one, add it to the other, to JUDGE_SYSTEM_PROMPT, and to the calibration
+examples in build_eval_artifacts.build_judge_calibration_examples; AR2,
+EO2, and the heuristic scorer all read every key by name.
 """
 
 import json

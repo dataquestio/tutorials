@@ -1,3 +1,33 @@
+"""Evaluating LLM Outputs 1 - Foundation Metrics and Evaluation Frameworks.
+
+Deterministic builder that turns the seed `git_support_eval/eval.jsonl` into
+the frozen evaluation artifacts shipped to both AR and EO courses. Demonstrates:
+
+- loading the seed eval set and validating every `gold_evidence` chunk ID
+  against the scoped Git KB corpus
+- deduplicating by normalized `user_query` and preserving source query IDs
+  and duplicate counts
+- mapping `expected_answerability` to `expected_behavior` (`answer`,
+  `clarify`, `refuse`)
+- adding evaluation and failure-mode tags on top of the existing command
+  and source tags
+- emitting validation warnings for items that need author review (mixed
+  labels, over-long clarifications, placeholder citations, unanswerable
+  references that leak general knowledge)
+- producing a RAGAS-compatible export with question, answer, contexts,
+  ground truth, and context IDs
+- producing the Advanced RAG overlay (around 40 synthetic cases across all
+  eight `case_type` values) without mutating the canonical Git corpus
+- producing synthetic baseline run logs in the 15-field Run Log shape
+- producing judge calibration examples (pass / partial / fail)
+- writing an `artifact_manifest.json` with counts, warning summaries, and
+  source paths
+
+The output of this script is the frozen contract that AR1-AR4 consume as
+starter data. EO1 lesson screens should walk learners through the same
+transformations.
+"""
+
 import argparse
 import hashlib
 import json
@@ -853,6 +883,10 @@ def main():
     output_dir = args.output_dir
 
     eval_path = rag_dir / "git_support_eval" / "eval.jsonl"
+    # Evidence validation runs against the scoped corpus on purpose: it
+    # is the smaller, hand-verifiable set, and the 151 unique gold-evidence
+    # chunk IDs all exist in both scoped and full. AR's pipeline reads the
+    # full corpus at runtime; this validation step does not need to.
     scoped_corpus_path = rag_dir / "git_kb_corpus_scoped" / "corpus.jsonl"
 
     seed_items = read_jsonl(eval_path)

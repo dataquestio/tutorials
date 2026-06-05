@@ -82,7 +82,11 @@ CLARIFY_SIGNALS = (
 def classify_observed_behavior(answer, citations):
     """Best-effort classifier for what the model *did* in plain English so
     that answerability_correct can be computed without a separate judge call.
-    Lessons can replace this with an LLM-based behavior classifier."""
+
+    Intentionally heuristic-only. This function runs in the offline
+    evaluation path where calling an LLM would defeat the point (cost,
+    latency, determinism). EO2 teaches how to upgrade this with a
+    judge-based classifier when accuracy matters more than speed."""
     lowered = (answer or "").lower()
     if any(signal in lowered for signal in REFUSAL_SIGNALS):
         return "refuse"

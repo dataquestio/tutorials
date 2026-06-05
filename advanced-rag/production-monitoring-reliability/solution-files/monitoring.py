@@ -1,3 +1,23 @@
+"""Advanced RAG 3 - Production Monitoring and Reliability.
+
+Consumes Run Log entries in the 15-field shape emitted by AR4's
+`production_gitquest.py` and summarized in the baseline run logs from
+`build_eval_artifacts.py`. Demonstrates:
+
+- aggregate metric summaries over a batch run (answerability accuracy,
+  citation precision/recall, average faithfulness, p95 latency, average
+  and total cost)
+- threshold-based alerting against `DEFAULT_THRESHOLDS`
+- baseline-versus-current comparison with per-metric deltas
+- a deterministic `make_degraded_copy` helper that synthesizes a degraded
+  current run from the baseline, so the lesson can demonstrate regressions
+  without depending on live API calls
+
+EO3's `compare_runs.py` imports `summarize_runs`, `check_thresholds`, and
+`compare_summaries` from this module so both courses report identical
+numbers.
+"""
+
 import argparse
 import json
 from pathlib import Path
