@@ -117,7 +117,7 @@ def expand_and_retrieve(query, n_results=10, show_queries=False):
     all_queries = [query] + reformulations
     seen = {}
     for q in all_queries:
-        time.sleep(1)  # pace embedding calls to stay within free-tier rate limits
+        time.sleep(1)  # pace embedding calls to stay within trial key rate limits
         for chunk in retrieve(q, n_results=n_results):
             cid = chunk["chunk_id"]
             if cid not in seen or chunk["distance"] < seen[cid]["distance"]:
