@@ -1,8 +1,9 @@
 import os
 import json
-import tiktoken
 import chromadb
 import cohere
+import tiktoken
+import time
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -21,6 +22,7 @@ with open("data/git_kb_corpus_scoped/corpus.jsonl", "r") as f:
 
 enc = tiktoken.encoding_for_model("gpt-4o-mini")
 
+
 def count_tokens(text):
     return len(enc.encode(text))
 
@@ -29,12 +31,9 @@ MAX_REFORMULATIONS = 3
 
 EXPANSION_PROMPT = """You are helping improve search over Git documentation.
 
-Given a user's question, generate 2 or 3 alternative phrasings that use
-different vocabulary but ask the same thing. Use terminology that might
-appear in official Git documentation (command names, flags, technical terms).
+Given a user's question, generate 2 or 3 alternative phrasings that use different vocabulary but ask the same thing. Use terminology that might appear in official Git documentation (command names, flags, technical terms).
 
-Return ONLY the alternative phrasings, one per line, with no numbering,
-no bullet points, no explanation, and no blank lines.
+Return ONLY the alternative phrasings, one per line, with no numbering, no bullet points, no explanation, and no blank lines.
 
 User question: {query}"""
 
@@ -52,7 +51,7 @@ def expand_query(query):
     reformulations = []
     for line in lines:
         # Strip common bullet prefixes in case the model ignores "no bullets"
-        for prefix in ("- ", "* ", "• "):
+        for prefix in ("- ", "* ", "  "):
             if line.startswith(prefix):
                 line = line[len(prefix):].strip()
                 break
@@ -77,18 +76,6 @@ def expand_query(query):
             break
 
     return reformulations if reformulations else [query]
-
-
-def expand_and_retrieve(query, n_results=10):
-    reformulations = expand_query(query)
-    all_queries = [query] + reformulations
-    seen = {}
-    for q in all_queries:
-        for chunk in retrieve(q, n_results=n_results):
-            cid = chunk["chunk_id"]
-            if cid not in seen or chunk["distance"] < seen[cid]["distance"]:
-                seen[cid] = chunk
-    return sorted(seen.values(), key=lambda x: x["distance"])
 
 
 def retrieve(query, n_results=5):
@@ -121,41 +108,52 @@ def retrieve(query, n_results=5):
     return chunks
 
 
+def expand_and_retrieve(query, n_results=10, show_queries=False):
+    reformulations = expand_query(query)
+    if show_queries:
+        print("Searching with:")
+        for q in [query] + reformulations:
+            print(f"  {q}")
+    all_queries = [query] + reformulations
+    seen = {}
+    for q in all_queries:
+        time.sleep(1)  # pace embedding calls to stay within free-tier rate limits
+        for chunk in retrieve(q, n_results=n_results):
+            cid = chunk["chunk_id"]
+            if cid not in seen or chunk["distance"] < seen[cid]["distance"]:
+                seen[cid] = chunk
+    return sorted(seen.values(), key=lambda x: x["distance"])
+
+
+def rerank(query, chunks, top_n=5):
+    documents = [c["text"] for c in chunks]
+    response = co.rerank(
+        model="rerank-v3.5",
+        query=query,
+        documents=documents,
+        top_n=top_n
+    )
+    reranked = []
+    for result in response.results:
+        chunk = chunks[result.index]
+        reranked.append({
+            **chunk,
+            "rerank_score": result.relevance_score
+        })
+    return reranked
+
+
 def build_context(chunks):
-    parts = []
+    context_parts = []
     for chunk in chunks:
-        parts.append(
+        context_parts.append(
             f"chunk_id: {chunk['chunk_id']}\n"
             f"title: {chunk['title']}\n"
             f"source_type: {chunk['source_type']}\n"
             f"command: {chunk['command']}\n\n"
             f"{chunk['text']}"
         )
-    return "\n\n---\n\n".join(parts)
-
-
-SYSTEM_PROMPT = """You are GitQuest, a Git support agent that helps \
-developers use Git correctly and confidently.
-
-Answer the user's question using ONLY the documentation provided below. \
-Do not use knowledge from your training data.
-
-Guidelines:
-- Provide the exact command syntax as shown in the documentation
-- Briefly explain what the command does and why it works
-- If there are important options or variations shown in the docs, mention them
-- If the provided documentation does not contain enough information to \
-answer the question, say so explicitly rather than guessing or drawing \
-on outside knowledge
-
-End your answer with a SOURCES section listing only the chunk_ids you \
-drew from, in this exact format:
-
-SOURCES:
-- chunk_id: <id> | <title>
-
-Documentation:
-{context}"""
+    return "\n\n---\n\n".join(context_parts)
 
 
 def parse_citations(raw_answer, retrieved_chunks):
@@ -175,24 +173,25 @@ def parse_citations(raw_answer, retrieved_chunks):
                         "source_type": chunk["source_type"]
                     })
     return cited
+    
+    
+SYSTEM_PROMPT = """You are GitQuest, a Git support agent that helps developers use Git correctly and confidently.
 
+Answer the user's question using ONLY the documentation provided below. Do not use knowledge from your training data.
 
-def rerank(query, chunks, top_n=5):
-    documents = [c["text"] for c in chunks]
-    response = co.rerank(
-        model="rerank-v3.5",
-        query=query,
-        documents=documents,
-        top_n=top_n
-    )
-    reranked = []
-    for result in response.results:
-        chunk = chunks[result.index]
-        reranked.append({
-            **chunk,
-            "rerank_score": result.relevance_score
-        })
-    return reranked
+Guidelines:
+- Provide the exact command syntax as shown in the documentation
+- Briefly explain what the command does and why it works
+- If there are important options or variations shown in the docs, mention them
+- If the provided documentation does not contain enough information to answer the question, say so explicitly rather than guessing or drawing on outside knowledge
+
+End your answer with a SOURCES section listing only the chunk_ids you drew from, in this exact format:
+
+SOURCES:
+- chunk_id: <id> | <title>
+
+Documentation:
+{context}"""
 
 
 def select_chunks_within_budget(chunks, token_budget=6000):
