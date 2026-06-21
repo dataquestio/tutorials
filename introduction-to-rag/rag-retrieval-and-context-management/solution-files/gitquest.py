@@ -51,7 +51,7 @@ def expand_query(query):
     reformulations = []
     for line in lines:
         # Strip common bullet prefixes in case the model ignores "no bullets"
-        for prefix in ("- ", "* ", "  "):
+        for prefix in ("- ", "* ", "• "):
             if line.startswith(prefix):
                 line = line[len(prefix):].strip()
                 break
