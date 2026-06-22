@@ -197,8 +197,7 @@ Guidelines:
 - Briefly explain what the command does and why it works
 - If there are important options or variations shown in the docs, mention them
 - If the provided documentation does not contain enough information to answer the question, say so explicitly rather than guessing or drawing on outside knowledge
-- Treat the provided documentation as the current recommended practice,
-  even if you are familiar with alternative approaches from your training
+- Treat the provided documentation as the current recommended practice, even if you are familiar with alternative approaches from your training
 
 End your answer with a SOURCES section listing only the chunk_ids you drew from, in this exact format:
 
