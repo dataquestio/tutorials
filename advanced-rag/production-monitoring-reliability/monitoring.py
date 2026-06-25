@@ -1,17 +1,19 @@
-"""Advanced RAG 3 - Production monitoring and reliability.
+"""Evaluating LLM Outputs 3 - Production monitoring helpers.
 
-Extends the EO3 monitoring helpers with production-scale concepts:
+Consumes Run Log entries in the 15-field shape emitted by EO3's
+``gitquest.build_run_log``. Demonstrates:
 
-- ``PRODUCTION_THRESHOLDS`` - tighter SLOs than the EO3 defaults
-- ``compare_models`` - A/B-style report across multiple named run sets
-- ``time_series_drift`` - per-snapshot drift detection for a sequence of
-  baselines (e.g. nightly runs)
-- ``regressions_by_slice`` - per-case-type regression breakdown so the
-  lesson can show "which slice broke" rather than only an overall delta
+- aggregate metric summaries over a batch run (answerability accuracy,
+  citation precision/recall, average faithfulness, p95 latency, average
+  and total cost)
+- threshold-based alerting against ``DEFAULT_THRESHOLDS``
+- baseline-versus-current comparison with per-metric deltas
+- a deterministic ``make_degraded_copy`` helper that synthesises a
+  degraded current run from the baseline so the lesson can demonstrate
+  regressions without depending on live API calls
 
-All EO3 helpers (``summarize_runs``, ``check_thresholds``,
-``compare_summaries``, ``make_degraded_copy``, etc.) are preserved
-unchanged so AR4's production harness can call them directly.
+The Advanced RAG monitoring lesson ships its own copy of this module
+that adds production wiring on top.
 """
 
 import argparse
@@ -26,16 +28,6 @@ DEFAULT_THRESHOLDS = {
     "min_citation_recall": 0.85,
     "max_p95_latency_ms": 3000,
     "max_avg_cost_usd": 0.01,
-}
-
-
-PRODUCTION_THRESHOLDS = {
-    "min_answerability_accuracy": 0.97,
-    "min_citation_precision": 0.95,
-    "min_citation_recall": 0.90,
-    "min_avg_faithfulness_score": 4.0,
-    "max_p95_latency_ms": 2500,
-    "max_avg_cost_usd": 0.008,
 }
 
 
@@ -90,25 +82,16 @@ def summarize_runs(runs):
 def check_thresholds(summary, thresholds=None):
     thresholds = thresholds or DEFAULT_THRESHOLDS
     alerts = []
-
-    def check_min(metric_key, threshold_key, alert):
-        threshold = thresholds.get(threshold_key)
-        value = summary.get(metric_key)
-        if threshold is not None and value is not None and value < threshold:
-            alerts.append(alert)
-
-    def check_max(metric_key, threshold_key, alert):
-        threshold = thresholds.get(threshold_key)
-        value = summary.get(metric_key)
-        if threshold is not None and value is not None and value > threshold:
-            alerts.append(alert)
-
-    check_min("answerability_accuracy", "min_answerability_accuracy", "answerability_accuracy_below_threshold")
-    check_min("citation_precision", "min_citation_precision", "citation_precision_below_threshold")
-    check_min("citation_recall", "min_citation_recall", "citation_recall_below_threshold")
-    check_min("avg_faithfulness_score", "min_avg_faithfulness_score", "avg_faithfulness_below_threshold")
-    check_max("p95_latency_ms", "max_p95_latency_ms", "p95_latency_above_threshold")
-    check_max("avg_cost_usd", "max_avg_cost_usd", "avg_cost_above_threshold")
+    if summary["answerability_accuracy"] is not None and summary["answerability_accuracy"] < thresholds["min_answerability_accuracy"]:
+        alerts.append("answerability_accuracy_below_threshold")
+    if summary["citation_precision"] is not None and summary["citation_precision"] < thresholds["min_citation_precision"]:
+        alerts.append("citation_precision_below_threshold")
+    if summary["citation_recall"] is not None and summary["citation_recall"] < thresholds["min_citation_recall"]:
+        alerts.append("citation_recall_below_threshold")
+    if summary["p95_latency_ms"] is not None and summary["p95_latency_ms"] > thresholds["max_p95_latency_ms"]:
+        alerts.append("p95_latency_above_threshold")
+    if summary["avg_cost_usd"] is not None and summary["avg_cost_usd"] > thresholds["max_avg_cost_usd"]:
+        alerts.append("avg_cost_above_threshold")
     return alerts
 
 
@@ -190,91 +173,13 @@ def make_degraded_copy(runs):
     return degraded
 
 
-def compare_models(named_runs):
-    """A/B-style report across multiple named run sets.
-
-    ``named_runs`` is a dict of ``{model_name: [run, ...]}``. Returns a
-    dict with per-model summaries, the metric deltas relative to the first
-    model, and a list of clear winners per metric."""
-    summaries = {name: summarize_runs(runs) for name, runs in named_runs.items()}
-    if len(summaries) < 2:
-        return {"summaries": summaries, "deltas": {}, "winners": {}}
-    baseline_name = next(iter(summaries))
-    baseline_summary = summaries[baseline_name]
-    deltas = {}
-    for name, summary in summaries.items():
-        if name == baseline_name:
-            continue
-        deltas[name] = compare_summaries(baseline_summary, summary)
-
-    winners = {}
-    metric_keys = set()
-    for summary in summaries.values():
-        metric_keys |= set(summary)
-    metric_keys.discard("run_count")
-    for metric in sorted(metric_keys):
-        values = [(name, summary.get(metric)) for name, summary in summaries.items()]
-        present = [(name, value) for name, value in values if value is not None]
-        if not present:
-            winners[metric] = None
-            continue
-        if metric in {"avg_latency_ms", "p95_latency_ms", "avg_cost_usd", "total_cost_usd"}:
-            winners[metric] = min(present, key=lambda kv: kv[1])[0]
-        else:
-            winners[metric] = max(present, key=lambda kv: kv[1])[0]
-    return {"summaries": summaries, "deltas": deltas, "winners": winners}
-
-
-def time_series_drift(snapshots):
-    """Compute per-step drift over an ordered list of (label, runs) snapshots.
-
-    Useful for the AR3 lesson screens that show a metric degrade across
-    nightly runs. Returns a list of step dicts with the prior label, this
-    label, and the metric deltas between them."""
-    summaries = [(label, summarize_runs(runs)) for label, runs in snapshots]
-    steps = []
-    for i in range(1, len(summaries)):
-        prev_label, prev_summary = summaries[i - 1]
-        cur_label, cur_summary = summaries[i]
-        steps.append({
-            "from": prev_label,
-            "to": cur_label,
-            "comparison": compare_summaries(prev_summary, cur_summary),
-            "regressions": regression_signals(prev_summary, cur_summary),
-        })
-    return {"summaries": [{"label": label, "summary": summary} for label, summary in summaries],
-            "steps": steps}
-
-
-def regressions_by_slice(baseline_runs, current_runs):
-    """Per-case-type regression breakdown. Combines slice_by_tag with
-    regression_signals so the lesson can say 'security cases regressed by X'
-    rather than only producing an overall delta."""
-    baseline_buckets = slice_by_tag(baseline_runs)
-    current_buckets = slice_by_tag(current_runs)
-    out = {}
-    for slice_name in sorted(set(baseline_buckets) | set(current_buckets)):
-        b = summarize_runs(baseline_buckets.get(slice_name, []))
-        c = summarize_runs(current_buckets.get(slice_name, []))
-        out[slice_name] = {
-            "baseline_summary": b,
-            "current_summary": c,
-            "regressions": regression_signals(b, c),
-        }
-    return out
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Summarise and compare GitQuest run logs at production scale.")
+    parser = argparse.ArgumentParser(description="Summarise and compare GitQuest run logs.")
     parser.add_argument("--baseline-log", type=Path, required=True,
                         help="Path to baseline_run_logs.jsonl.")
     parser.add_argument("--current-log", type=Path, default=None,
                         help="Path to a current run log. Defaults to a degraded copy of the baseline.")
-    parser.add_argument("--use-production-thresholds", action="store_true",
-                        help="Check against the tighter PRODUCTION_THRESHOLDS instead of the EO3 defaults.")
     args = parser.parse_args()
-
-    thresholds = PRODUCTION_THRESHOLDS if args.use_production_thresholds else DEFAULT_THRESHOLDS
 
     baseline_runs = read_jsonl(args.baseline_log)
     current_runs = read_jsonl(args.current_log) if args.current_log else make_degraded_copy(baseline_runs)
@@ -287,12 +192,11 @@ def main():
         "current_summary": current_summary,
         "comparison": compare_summaries(baseline_summary, current_summary),
         "regressions": regression_signals(baseline_summary, current_summary),
-        "regressions_by_slice": regressions_by_slice(baseline_runs, current_runs),
-        "baseline_alerts": check_thresholds(baseline_summary, thresholds=thresholds),
-        "current_alerts": check_thresholds(current_summary, thresholds=thresholds),
+        "baseline_alerts": check_thresholds(baseline_summary),
+        "current_alerts": check_thresholds(current_summary),
         "baseline_dashboard": dashboard(baseline_runs),
         "current_dashboard": dashboard(current_runs),
-        "thresholds": thresholds,
+        "thresholds": DEFAULT_THRESHOLDS,
     }
     print(json.dumps(report, indent=2, sort_keys=True))
 

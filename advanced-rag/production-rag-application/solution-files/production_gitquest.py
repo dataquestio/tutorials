@@ -1,28 +1,46 @@
-"""Advanced RAG 4 - Production RAG Application.
+"""Advanced RAG 4 - Production RAG Application (guided project).
 
-Small harness that consumes the shared evaluation artifacts, runs them through
-the Advanced GitQuest pipeline, scores each run against the shared evaluation
-contract, and emits the 15-field Run Log entries used by Advanced RAG 3
-(monitoring) and the future Evaluating LLM Outputs 3 lesson.
+Small production-style harness for the GitQuest assistant. AR4 is
+practice: every component used here was introduced earlier in the path.
 
-By default the harness runs offline using the deterministic generator and
-heuristic judge in tutorials/advanced-rag/_shared/. Pass real Cohere/OpenAI
-clients to AdvancedGitQuest to drive it live.
+The harness:
+
+1. Loads the curated eval set and Advanced RAG cases (built in EO1).
+2. Runs each item through ``ask_gitquest_secured`` (introduced in AR1) and
+   the self-RAG decision loop (introduced in AR2) for cases that benefit.
+3. Scores every run with the evaluation metrics (introduced in EO1) and
+   the heuristic judge (introduced in EO2).
+4. Emits 15-field Run Log entries (introduced in EO3).
+5. Summarises the batch with the production monitoring helpers
+   (introduced in EO3 and extended in AR3) and prints alerts against the
+   production SLOs.
+
+Run with:
+    python production_gitquest.py --rag-dir <path/to/rag> --limit 12 \\
+        --output-log production_gitquest_run_logs.jsonl
 """
 
 import argparse
 import json
-import os
-import sys
+import time
+from pathlib import Path
 
-
-SHARED = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "..", "_shared"))
-if SHARED not in sys.path:
-    sys.path.insert(0, SHARED)
-
-from evaluation import score_run
-from gitquest_advanced import AdvancedGitQuest, build_run_log, default_config
+from evaluate import score_item
+from gitquest import (
+    PIPELINE_VERSION,
+    ask_gitquest_secured,
+    build_run_log,
+    corpus,
+    run_self_rag_loop,
+)
 from judge import faithfulness_score, heuristic_judge
+from monitoring import (
+    PRODUCTION_THRESHOLDS,
+    check_thresholds,
+    dashboard,
+    regressions_by_slice,
+    summarize_runs,
+)
 
 
 def read_jsonl(path):
@@ -36,19 +54,19 @@ def read_jsonl(path):
 
 
 def write_jsonl(path, rows):
-    os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
+    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         for row in rows:
             f.write(json.dumps(row, ensure_ascii=True, sort_keys=True) + "\n")
 
 
 def default_rag_dir():
-    if os.path.exists("/workspace/rag"):
-        return "/workspace/rag"
-    return "rag"
+    if Path("/workspace/rag").exists():
+        return Path("/workspace/rag")
+    return Path("rag")
 
 
-def evidence_payload(corpus, chunk_ids):
+def evidence_payload(chunk_ids):
     payload = []
     for chunk_id in chunk_ids:
         if chunk_id in corpus:
@@ -60,94 +78,119 @@ def evidence_payload(corpus, chunk_ids):
     return payload
 
 
-def run_eval_item(app, item):
-    gold = item.get("gold_evidence") or []
-    required = item.get("required_citations") or gold
-    outcome = app.run(
-        query=item["user_query"],
-        trusted_ids=gold,
-        expected_behavior=item["expected_behavior"],
-    )
-    evidence = evidence_payload(app.corpus, gold)
-    judgement = heuristic_judge(
-        query=item["user_query"],
-        answer=outcome["answer"],
-        evidence=evidence,
-        cited_ids=outcome["citations"],
-        expected_behavior=item["expected_behavior"],
-    )
-    metrics = score_run(
-        expected_behavior=item["expected_behavior"],
-        answer=outcome["answer"],
-        citations=outcome["citations"],
-        required_citations=required,
-        gold_evidence=gold,
-        final_chunk_ids=[c["chunk_id"] for c in outcome["final_chunks"]],
-        faithfulness_score=faithfulness_score(judgement),
-    )
-    log = build_run_log(item["query_id"], outcome, app.config, metrics)
-    log["judgement"] = judgement
-    return log
+def run_eval_item(item, config):
+    """Run a curated eval item through the secured pipeline and score it.
+
+    Items marked ``retrieve_again`` get the self-RAG loop; everything else
+    gets a single secured-pipeline call so the harness is fast."""
+    if item.get("expected_behavior") == "retrieve_again":
+        history = run_self_rag_loop(
+            query=item["user_query"],
+            required_ids=item.get("required_citations") or item.get("gold_evidence") or [],
+            tags=item.get("tags") or [],
+            expected_behavior=item["expected_behavior"],
+        )
+        result = history[-1]["result"]
+        judgement = history[-1]["judgement"]
+    else:
+        result = ask_gitquest_secured(query=item["user_query"])
+        judgement = heuristic_judge(
+            query=item["user_query"],
+            answer=result["answer"],
+            evidence=evidence_payload(item.get("gold_evidence") or []),
+            cited_ids=[c["chunk_id"] for c in result["citations"]],
+            expected_behavior=item["expected_behavior"],
+        )
+
+    metrics = score_item(item, result)
+    metrics["faithfulness_score"] = faithfulness_score(judgement)
+    return build_run_log(item["query_id"], result, config, metrics=metrics, judgement=judgement)
 
 
-def run_advanced_case(app, case):
-    trusted_ids = [evidence["chunk_id"] for evidence in case.get("trusted_evidence", [])]
-    outcome = app.run(
-        query=case["user_query"],
-        trusted_ids=trusted_ids,
-        injected_docs=case.get("injected_docs"),
-        expected_behavior=case["expected_behavior"],
-    )
-    evidence = evidence_payload(app.corpus, trusted_ids)
-    judgement = heuristic_judge(
-        query=case["user_query"],
-        answer=outcome["answer"],
-        evidence=evidence,
-        cited_ids=outcome["citations"],
-        expected_behavior=case["expected_behavior"],
-    )
-    metrics = score_run(
-        expected_behavior=case["expected_behavior"],
-        answer=outcome["answer"],
-        citations=outcome["citations"],
-        required_citations=trusted_ids,
-        gold_evidence=trusted_ids,
-        final_chunk_ids=[c["chunk_id"] for c in outcome["final_chunks"]],
-        faithfulness_score=faithfulness_score(judgement),
-    )
-    log = build_run_log(case["case_id"], outcome, app.config, metrics)
+def run_advanced_case(case, config):
+    """Run an Advanced RAG case (security overlay, self-RAG retry, etc.)."""
+    if case["case_type"] == "self_rag_retry":
+        history = run_self_rag_loop(
+            query=case["user_query"],
+            required_ids=[ev["chunk_id"] for ev in case.get("trusted_evidence", [])],
+            tags=case.get("tags") or [],
+            expected_behavior=case["expected_behavior"],
+        )
+        result = history[-1]["result"]
+        judgement = history[-1]["judgement"]
+    else:
+        result = ask_gitquest_secured(
+            query=case["user_query"],
+            injected_docs=case.get("injected_docs"),
+        )
+        judgement = heuristic_judge(
+            query=case["user_query"],
+            answer=result["answer"],
+            evidence=evidence_payload([ev["chunk_id"] for ev in case.get("trusted_evidence", [])]),
+            cited_ids=[c["chunk_id"] for c in result["citations"]],
+            expected_behavior=case["expected_behavior"],
+        )
+
+    trusted_ids = [ev["chunk_id"] for ev in case.get("trusted_evidence", [])]
+    fake_eval_item = {
+        "query_id": case["case_id"],
+        "expected_behavior": case["expected_behavior"],
+        "gold_evidence": trusted_ids,
+        "required_citations": trusted_ids,
+        "reference_answer": "",
+    }
+    metrics = score_item(fake_eval_item, result)
+    metrics["faithfulness_score"] = faithfulness_score(judgement)
+    log = build_run_log(case["case_id"], result, config, metrics=metrics, judgement=judgement)
     log["case_type"] = case["case_type"]
-    log["judgement"] = judgement
     return log
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run a small production-style GitQuest harness.")
-    parser.add_argument("--rag-dir", default=default_rag_dir())
-    parser.add_argument("--limit", type=int, default=8)
-    parser.add_argument(
-        "--output-log",
-        default="production_gitquest_run_logs.jsonl",
-    )
+    parser = argparse.ArgumentParser(description="GitQuest production harness.")
+    parser.add_argument("--rag-dir", type=Path, default=default_rag_dir())
+    parser.add_argument("--limit", type=int, default=8,
+                        help="Number of eval items and advanced cases to run.")
+    parser.add_argument("--output-log", type=Path, default=Path("production_gitquest_run_logs.jsonl"))
     args = parser.parse_args()
 
-    artifact_dir = os.path.join(args.rag_dir, "generated_eval_artifacts")
-    corpus_path = os.path.join(args.rag_dir, "git_kb_corpus_full", "corpus.jsonl")
+    artifact_dir = args.rag_dir / "generated_eval_artifacts"
 
-    app = AdvancedGitQuest(corpus_path=corpus_path, config=default_config())
+    config = {
+        "corpus": "full",
+        "candidate_k": 10,
+        "rerank_top_n": 5,
+        "token_budget": 6000,
+        "model": "gpt-4o-mini",
+        "pipeline_version": PIPELINE_VERSION,
+    }
 
-    eval_items = read_jsonl(os.path.join(artifact_dir, "eval_items_curated_draft.jsonl"))
-    advanced_cases = read_jsonl(os.path.join(artifact_dir, "advanced_rag_cases_draft.jsonl"))
+    eval_items = read_jsonl(artifact_dir / "eval_items_curated.jsonl")
+    advanced_cases = read_jsonl(artifact_dir / "advanced_rag_cases.jsonl")
 
+    started = time.time()
     runs = []
     for item in eval_items[: args.limit]:
-        runs.append(run_eval_item(app, item))
+        runs.append(run_eval_item(item, config))
     for case in advanced_cases[: args.limit]:
-        runs.append(run_advanced_case(app, case))
+        runs.append(run_advanced_case(case, config))
+    elapsed = time.time() - started
 
     write_jsonl(args.output_log, runs)
+
+    summary = summarize_runs(runs)
+    report = {
+        "run_count": len(runs),
+        "wall_clock_seconds": round(elapsed, 2),
+        "summary": summary,
+        "alerts_vs_production_slos": check_thresholds(summary, thresholds=PRODUCTION_THRESHOLDS),
+        "dashboard": dashboard(runs),
+        "regressions_by_slice": regressions_by_slice(runs, runs),  # baseline vs itself = no regressions
+        "thresholds": PRODUCTION_THRESHOLDS,
+    }
+
     print(f"Wrote {len(runs)} run logs to {args.output_log}")
-    print(json.dumps(runs[:2], indent=2, sort_keys=True))
+    print(json.dumps(report, indent=2, sort_keys=True))
 
 
 if __name__ == "__main__":

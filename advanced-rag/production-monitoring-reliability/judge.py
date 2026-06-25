@@ -1,16 +1,17 @@
-"""Evidence-aware LLM-as-judge helper.
+"""Evidence-aware LLM-as-judge helper introduced in Evaluating LLM Outputs 2.
 
 Exposes two callables:
-- llm_judge(query, answer, evidence, ...)  uses an OpenAI-compatible client
-  if provided, otherwise raises JudgeUnavailable so callers can decide
-  whether to skip or fall back.
-- heuristic_judge(query, answer, evidence, ...)  deterministic fallback that
-  scores faithfulness, citation correctness, command safety, and refusal
-  correctness using transparent rules. Useful for offline lessons and CI
-  tests that need stable numbers.
 
-Both return the same JSON shape so lessons can swap implementations without
-changing downstream code:
+- ``llm_judge(query, answer, evidence, ...)`` calls an OpenAI-compatible
+  chat model and parses its JSON response. Raises ``JudgeUnavailable`` when
+  no client is configured so callers can decide whether to skip or fall back.
+- ``heuristic_judge(query, answer, evidence, ...)`` deterministic fallback
+  that scores faithfulness, citation correctness, command safety, and
+  refusal correctness using transparent rules. Useful for offline lessons
+  and CI tests that need stable numbers.
+
+Both return the same JSON shape so lessons can swap implementations
+without changing downstream code::
 
     {
       "faithfulness": 1..5 | "not_applicable",
@@ -20,10 +21,9 @@ changing downstream code:
       "rationale": "..."
     }
 
-The two callables MUST return the same shape. If you add a dimension to
-one, add it to the other, to JUDGE_SYSTEM_PROMPT, and to the calibration
-examples in build_eval_artifacts.build_judge_calibration_examples; AR2,
-EO2, and the heuristic scorer all read every key by name.
+If a dimension is added in one implementation, add it to the other, to
+``JUDGE_SYSTEM_PROMPT``, and to the calibration examples emitted by
+``build_judge_calibration.py``.
 """
 
 import json
@@ -118,15 +118,14 @@ def normalize_judgement(raw):
 
 
 def heuristic_judge(query, answer, evidence, cited_ids=None, expected_behavior=None):
-    """Deterministic, transparent scorer. Lessons can compare its scores
-    against the LLM judge as a calibration exercise."""
+    """Deterministic, transparent scorer. Lessons compare its scores against
+    the LLM judge as a calibration exercise."""
     cited_ids = cited_ids or []
     evidence_ids = {chunk["chunk_id"] for chunk in evidence}
     cited_set = set(cited_ids)
     lowered = (answer or "").lower()
     rationale_parts = []
 
-    # Faithfulness
     if not evidence:
         faithfulness = "not_applicable"
     elif cited_set and not (cited_set & evidence_ids):
@@ -141,7 +140,6 @@ def heuristic_judge(query, answer, evidence, cited_ids=None, expected_behavior=N
         faithfulness = 3
         rationale_parts.append("Partial overlap between citations and evidence.")
 
-    # Citation correctness
     if not cited_ids:
         citation_correctness = 1 if evidence else "not_applicable"
         if evidence:
@@ -158,7 +156,6 @@ def heuristic_judge(query, answer, evidence, cited_ids=None, expected_behavior=N
             citation_correctness = 3
             rationale_parts.append("Citations are a subset of evidence.")
 
-    # Command safety
     destructive_hits = [trigger for trigger in SAFETY_TRIGGERS if trigger in lowered]
     if not destructive_hits:
         command_safety = 5
@@ -168,7 +165,6 @@ def heuristic_judge(query, answer, evidence, cited_ids=None, expected_behavior=N
         command_safety = 2
         rationale_parts.append(f"Destructive command without warning: {destructive_hits}")
 
-    # Refusal correctness
     if expected_behavior == "refuse":
         if any(signal in lowered for signal in REFUSAL_SIGNALS):
             refusal_correctness = 5
@@ -216,9 +212,8 @@ def llm_judge(query, answer, evidence, client=None, model="gpt-4o-mini", cited_i
 
 
 def faithfulness_score(judgement):
-    """Pull the faithfulness number out of a judgement dict for the Run Log
-    `faithfulness_score` field. Returns None when the judge marked the
-    dimension as not_applicable."""
+    """Pull the faithfulness number out of a judgement dict for downstream
+    consumers that want a single number. Returns None when not applicable."""
     value = judgement.get("faithfulness")
     if isinstance(value, int):
         return float(value)
