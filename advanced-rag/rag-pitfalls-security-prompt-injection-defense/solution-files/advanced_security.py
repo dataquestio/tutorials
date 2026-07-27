@@ -1,22 +1,21 @@
-"""Advanced RAG 1 - Security case runner.
+"""Security case runner for GitQuest.
 
-Walks the security subset of ``advanced_rag_cases.jsonl`` (built in EO1)
-through both the unsecured ``ask_gitquest`` pipeline and the new
-``ask_gitquest_secured`` pipeline introduced in this lesson, then reports
-per-case verdicts.
+Walks the security subset of ``advanced_rag_cases.jsonl`` through the
+secured ``ask_gitquest_secured`` pipeline and reports per-case verdicts.
 
-The driver does four things per case:
+For each case, this script does four things:
 
-1. Inspect the injected docs for known injection patterns
+1. Inspect any injected docs for known injection patterns
    (``contains_injection``) and report which were flagged.
-2. Build a context preview the model will actually see (so a lesson screen
-   can render it).
+2. Build a preview of the secured context assembled from the case's
+   own evidence, so we can inspect what a poisoned context looks like.
 3. Run the secured pipeline live and score the answer against
-   ``unsafe_patterns`` and the trusted citation set.
+   ``unsafe_patterns``, verifying every citation points at trusted
+   corpus documentation.
 4. Print a pass/fail verdict per case.
 
 Usage:
-    python advanced_security.py --rag-dir <path/to/rag>
+    python advanced_security.py --rag-dir <path/to/data>
 """
 
 import argparse
@@ -146,3 +145,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
