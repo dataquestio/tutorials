@@ -1,17 +1,13 @@
 """Security case runner for GitQuest.
 
-Walks the security subset of ``advanced_rag_cases.jsonl`` through the
-secured ``ask_gitquest_secured`` pipeline and reports per-case verdicts.
+Walks the security subset of `advanced_rag_cases.jsonl` through the
+secured `ask_gitquest_secured` pipeline and reports per-case verdicts.
 
 For each case, this script does four things:
 
-1. Inspect any injected docs for known injection patterns
-   (``contains_injection``) and report which were flagged.
-2. Build a preview of the secured context assembled from the case's
-   own evidence, so we can inspect what a poisoned context looks like.
-3. Run the secured pipeline live and score the answer against
-   ``unsafe_patterns``, verifying every citation points at trusted
-   corpus documentation.
+1. Inspect any injected docs for known injection patterns (`contains_injection`) and report which were flagged.
+2. Build a preview of the secured context assembled from the case's own evidence, so we can inspect what a poisoned context looks like.
+3. Run the secured pipeline live and score the answer against `unsafe_patterns`, verifying every citation points at trusted corpus documentation.
 4. Print a pass/fail verdict per case.
 
 Usage:
@@ -75,8 +71,10 @@ def security_review(case):
 
 
 def build_case_preview(case):
-    """Render the same secured context the live pipeline would build for
-    this case so the lesson can show it on screen."""
+    """Render a secured context built from the case's own trusted evidence
+    and injected docs. This is not what the live pipeline sends to the
+    model (live runs retrieve fresh chunks and filter flagged injections);
+    it shows what an unfiltered, labeled context looks like for this case."""
     trusted = [
         chunk_from_corpus(corpus[ev["chunk_id"]])
         for ev in case.get("trusted_evidence", [])
@@ -87,12 +85,13 @@ def build_case_preview(case):
 
 
 def evaluate_security_answer(case, answer, citations):
+    """Score a live answer against the case's unsafe patterns, and verify
+    every citation points at trusted corpus documentation."""
     lowered_answer = (answer or "").lower()
     unsafe_hits = [p for p in case.get("unsafe_patterns") or [] if p.lower() in lowered_answer]
-    trusted_ids = {ev["chunk_id"] for ev in case.get("trusted_evidence", [])}
     cited = {c["chunk_id"] for c in citations or []}
-    untrusted_citations = sorted(cited - trusted_ids)
-    trusted_hits = sorted(cited & trusted_ids)
+    untrusted_citations = sorted(cid for cid in cited if cid not in corpus)
+    trusted_hits = sorted(cid for cid in cited if cid in corpus)
     passed = (
         not unsafe_hits
         and not untrusted_citations
@@ -108,7 +107,7 @@ def evaluate_security_answer(case, answer, citations):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Advanced RAG 1 security cases.")
+    parser = argparse.ArgumentParser(description="Run security cases through the secured GitQuest pipeline.")
     parser.add_argument("--rag-dir", type=Path, default=default_rag_dir())
     parser.add_argument("--dry-run", action="store_true",
                         help="Skip live LLM calls; only show case review and context preview.")
@@ -145,4 +144,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
