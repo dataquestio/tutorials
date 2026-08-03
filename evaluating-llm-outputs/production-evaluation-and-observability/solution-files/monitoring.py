@@ -167,6 +167,12 @@ def make_degraded_copy(runs):
             copy["citations"] = []
         if i % 5 == 0:
             copy.setdefault("metrics", {})["answerability_correct"] = False
+        # Only touch rows that have a score: a row that legitimately has none,
+        # such as a correct refusal with nothing to cite, should stay that way.
+        # DEFAULT_THRESHOLDS does not check faithfulness, so this degradation
+        # shows up as a summary number that moved without raising an alert.
+        if i % 2 == 0 and copy.get("metrics", {}).get("faithfulness_score") is not None:
+            copy["metrics"]["faithfulness_score"] = 2
         if copy.get("latency_ms") is not None:
             copy["latency_ms"] = int(copy["latency_ms"] * 1.8)
         degraded.append(copy)

@@ -1,0 +1,79 @@
+AR4 AUTHORING NOTES
+Delete before shipping the lesson.
+
+
+WHAT TO DO
+
+Guided project. The learner builds ProductionHarness themselves, in OOP, with little
+hand-holding, so production_gitquest.py is the reference solution rather than taught
+code.
+
+Treat the handler contract comment in that file as the project spec. Whatever it
+says is what a learner's own handler has to satisfy:
+
+  (case, config) -> (result, judgement)
+
+The three things worth briefing explicitly, because they are what makes the harness
+a harness rather than a script:
+
+- the case-handler registry, so a new failure mode is a one-liner from outside the
+  harness rather than an edit to the orchestrator
+- cost_per_passing_answer_usd, which answers what a budget owner actually asks
+- run_canary, per-item paired runs across two configs, so behavioural drift surfaces
+  before a config change is promoted
+
+Point learners at self_rag_retry_handler as the pattern to copy. It is the shorter of
+the two handlers and it gets the judge's evidence argument right.
+
+
+ASSUMPTIONS
+
+- This asks for the learner's first class in the whole GitQuest sequence. Nothing in
+  Intro to RAG, EO1-EO3, or AR1-AR3 exercises class, __init__, self, @staticmethod,
+  or a registry pattern. Whether that is fine depends on what the platform requires
+  upstream of the AI engineering path. If OOP is taught earlier, state it in the brief
+  as a prerequisite. If not, this is a large unaided ask.
+
+- The metric split matters more than anything else here, and it is easy to get
+  backwards:
+
+    retrieval_recall_at_k, retrieval_mrr     the answer key (gold_evidence)
+    citation_precision, citation_recall      the answer key (required_citations)
+    faithfulness, citation_correctness       the chunks the model was GIVEN
+    relevance (AR2 onward)                   the question, using Git knowledge
+
+  Both judges define faithfulness as "are the cited ids a subset of the supplied
+  evidence". Hand a judge the answer key instead and it answers a different question,
+  "did the pipeline cite what we expected", which is citation precision under the
+  wrong name. Symptom to recognise: real citations reported as invented, and
+  faithfulness that never reaches 5.
+
+  evidence_payload() exists for hydrating curated chunk ids when you want to inspect
+  an answer key. It must not be passed to a judge as evidence, and its docstring
+  says so.
+
+- EVAL_ITEM_CASE_TYPE is "default" because curated eval items only ever carry
+  answer / clarify / refuse. `retrieve_again` reaches the code only via overlay cases,
+  which dispatch on case_type instead. The constant keeps the override hook.
+
+- The judgement dict carries relevance as the string "not_applicable" under the
+  heuristic judge. That never reaches arithmetic: monitoring aggregates only
+  metrics["faithfulness_score"], a float or None.
+
+
+EXPECTED RESULT
+
+Runs end to end. At --limit 2 that is 4 run logs in roughly 33s, pipeline_version
+gitquest_ar2_v1, avg_faithfulness_score around 4.5, clearing AR3's 4.0 threshold.
+
+Cost: --limit 8 means 8 eval items plus 8 advanced cases, each a full pipeline run
+with generation, plus two judge requests per judgement if a live judge is wired in.
+Budget before demonstrating a full batch.
+
+
+FORWARD OPTION, NOT A DEFAULT
+
+With AR2's relevance-driven loop in place, AR4 could route every curated eval item
+through the self-RAG handler, since the loop no longer needs an answer key to decide
+whether to retry. That doubles the pipeline passes on a batch run, so it is a
+deliberate choice for whoever writes this lesson.

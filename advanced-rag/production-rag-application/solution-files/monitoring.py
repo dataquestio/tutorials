@@ -9,9 +9,17 @@ Extends the EO3 monitoring helpers with production-scale concepts:
 - ``regressions_by_slice`` - per-case-type regression breakdown so the
   lesson can show "which slice broke" rather than only an overall delta
 
-All EO3 helpers (``summarize_runs``, ``check_thresholds``,
-``compare_summaries``, ``make_degraded_copy``, etc.) are preserved
-unchanged so AR4's production harness can call them directly.
+``check_thresholds`` is also rewritten here, in two ways:
+
+- it honours any threshold key present, so ``min_avg_faithfulness_score``
+  from ``PRODUCTION_THRESHOLDS`` is actually checked
+- a configured threshold whose metric is absent now raises
+  ``<metric>_not_measured`` instead of being skipped silently
+
+Every other EO3 helper (``summarize_runs``, ``compare_summaries``,
+``regression_signals``, ``slice_by_tag``, ``dashboard``,
+``make_degraded_copy``) is preserved unchanged, so AR4's production harness
+can call them directly.
 """
 
 import argparse
@@ -91,17 +99,27 @@ def check_thresholds(summary, thresholds=None):
     thresholds = thresholds or DEFAULT_THRESHOLDS
     alerts = []
 
-    def check_min(metric_key, threshold_key, alert):
+    # If you configured a threshold, you asked to be told about that metric, and
+    # "the metric never arrived" is worse news than "the metric is low", not
+    # better. So an absent metric raises its own alert rather than being skipped.
+    # Skipping it silently is how a monitoring report comes back clean while the
+    # thing you wanted watched is not being measured at all.
+    def _check(metric_key, threshold_key, alert, worse):
         threshold = thresholds.get(threshold_key)
+        if threshold is None:
+            return
         value = summary.get(metric_key)
-        if threshold is not None and value is not None and value < threshold:
+        if value is None:
+            alerts.append(f"{metric_key}_not_measured")
+            return
+        if worse(value, threshold):
             alerts.append(alert)
 
+    def check_min(metric_key, threshold_key, alert):
+        _check(metric_key, threshold_key, alert, lambda v, t: v < t)
+
     def check_max(metric_key, threshold_key, alert):
-        threshold = thresholds.get(threshold_key)
-        value = summary.get(metric_key)
-        if threshold is not None and value is not None and value > threshold:
-            alerts.append(alert)
+        _check(metric_key, threshold_key, alert, lambda v, t: v > t)
 
     check_min("answerability_accuracy", "min_answerability_accuracy", "answerability_accuracy_below_threshold")
     check_min("citation_precision", "min_citation_precision", "citation_precision_below_threshold")
@@ -184,6 +202,13 @@ def make_degraded_copy(runs):
             copy["citations"] = []
         if i % 5 == 0:
             copy.setdefault("metrics", {})["answerability_correct"] = False
+        # Only touch rows that have a score: a row that legitimately has none,
+        # such as a correct refusal with nothing to cite, should stay that way.
+        # EO3's DEFAULT_THRESHOLDS does not check faithfulness, so this shows up
+        # here as a summary number that moved without an alert. AR3 adds the
+        # threshold that turns it into one.
+        if i % 2 == 0 and copy.get("metrics", {}).get("faithfulness_score") is not None:
+            copy["metrics"]["faithfulness_score"] = 2
         if copy.get("latency_ms") is not None:
             copy["latency_ms"] = int(copy["latency_ms"] * 1.8)
         degraded.append(copy)

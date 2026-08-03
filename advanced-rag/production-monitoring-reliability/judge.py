@@ -1,4 +1,5 @@
-"""Evidence-aware LLM-as-judge helper introduced in Evaluating LLM Outputs 2.
+"""Evidence-aware LLM-as-judge helper introduced in Evaluating LLM Outputs 2,
+extended in Advanced RAG 2 with a ``relevance`` dimension.
 
 Exposes two callables:
 
@@ -18,8 +19,31 @@ without changing downstream code::
       "citation_correctness": 1..5 | "not_applicable",
       "command_safety": 1..5 | "not_applicable",
       "refusal_correctness": 1..5 | "not_applicable",
+      "relevance": 1..5 | "not_applicable",
+      "better_tool": "git <command>" | "",
       "rationale": "..."
     }
+
+``relevance`` is the dimension Advanced RAG 2 adds, and it is deliberately
+different from the other four:
+
+- The other four are scored against the SUPPLIED EVIDENCE ONLY. ``relevance``
+  may use the model's own Git knowledge. That exception exists because it
+  drives a *decision* (should the pipeline retrieve again?) rather than
+  assigning a grade. An evidence-only judge cannot notice that the retrieved
+  evidence was the wrong evidence: if the answer is supported by what it was
+  given, it passes.
+- It is scored by a **second request**, not another key in
+  ``JUDGE_SYSTEM_PROMPT``. An instruction that contradicts the rest of a prompt
+  tends to lose to it, so the exception gets a request of its own. That means
+  ``llm_judge`` costs two requests per judgement.
+- ``heuristic_judge`` returns ``"not_applicable"`` for it, because a
+  substring rule cannot decide whether a better-suited Git command exists.
+  That is the point, not a gap to fill: it is why the self-RAG loop needs a
+  live judge rather than the offline one.
+- When ``relevance`` is below 5, ``better_tool`` names the command that
+  should have been used. ``run_self_rag_loop`` builds its retry query from
+  that field, so the judge both diagnoses the problem and directs the fix.
 
 If a dimension is added in one implementation, add it to the other, to
 ``JUDGE_SYSTEM_PROMPT``, and to the calibration examples emitted by
@@ -62,6 +86,43 @@ SUPPLIED EVIDENCE (only these chunks are valid grounding):
 {evidence}
 
 ANSWER TO EVALUATE:
+{answer}
+"""
+
+
+# ---------------------------------------------------------------------------
+# Advanced RAG 2 - the relevance dimension, scored by its own call.
+#
+# This is a separate request rather than a sixth key in JUDGE_SYSTEM_PROMPT
+# because that prompt's opening instruction, "Score the answer against the
+# SUPPLIED EVIDENCE ONLY", governs everything in the same request. Relevance
+# needs the opposite permission, so asking for both at once means one of them
+# loses. Isolating it is what makes the exception hold.
+# ---------------------------------------------------------------------------
+
+RELEVANCE_SYSTEM_PROMPT = """You score ONE dimension of a Git assistant's answer.
+
+relevance: integer 1-5. For this dimension you MAY use your own knowledge of Git.
+It decides whether the pipeline should retrieve again; it is not a grade.
+
+Score whether the answer uses the approach Git's own documentation would
+recommend for this exact question:
+
+5 = the standard, recommended tool for this question
+3 = workable, but a better-suited command exists
+1 = the wrong tool for this question
+
+If you score below 5, name the better command in better_tool, for example
+"git worktree". Otherwise set better_tool to "".
+
+Respond with JSON only:
+{"relevance": <int>, "better_tool": "<command or empty>", "rationale": "<short>"}"""
+
+
+RELEVANCE_USER_TEMPLATE = """QUESTION:
+{query}
+
+ANSWER:
 {answer}
 """
 
@@ -113,6 +174,8 @@ def normalize_judgement(raw):
         "citation_correctness": normalize_score(raw.get("citation_correctness")),
         "command_safety": normalize_score(raw.get("command_safety")),
         "refusal_correctness": normalize_score(raw.get("refusal_correctness")),
+        "relevance": normalize_score(raw.get("relevance")),
+        "better_tool": str(raw.get("better_tool", "") or "").strip()[:60],
         "rationale": str(raw.get("rationale", ""))[:500],
     }
 
@@ -174,41 +237,64 @@ def heuristic_judge(query, answer, evidence, cited_ids=None, expected_behavior=N
     else:
         refusal_correctness = "not_applicable"
 
+    # relevance is deliberately unscored here. Deciding whether a better-suited
+    # Git command exists needs Git knowledge, not substring rules, so the
+    # heuristic cannot answer it. See the module docstring.
+    rationale_parts.append("Relevance not scored: the heuristic judge cannot assess it.")
+
     return {
         "faithfulness": faithfulness,
         "citation_correctness": citation_correctness,
         "command_safety": command_safety,
         "refusal_correctness": refusal_correctness,
-        "rationale": " ".join(rationale_parts) or "All dimensions passed heuristic checks.",
+        "relevance": "not_applicable",
+        "better_tool": "",
+        "rationale": " ".join(rationale_parts),
     }
 
 
-def llm_judge(query, answer, evidence, client=None, model="gpt-4o-mini", cited_ids=None, expected_behavior=None):
-    if client is None:
-        raise JudgeUnavailable(
-            "No OpenAI-compatible client was passed. Either provide a client "
-            "or call heuristic_judge() instead."
-        )
-    user_prompt = JUDGE_USER_TEMPLATE.format(
-        query=query,
-        evidence=format_evidence(evidence),
-        answer=answer,
-    )
+def _json_call(client, model, system_prompt, user_prompt):
     response = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
         response_format={"type": "json_object"},
         temperature=0.0,
     )
-    raw = response.choices[0].message.content or "{}"
     try:
-        parsed = json.loads(raw)
+        return json.loads(response.choices[0].message.content or "{}")
     except json.JSONDecodeError:
-        parsed = {}
-    return normalize_judgement(parsed)
+        return {}
+
+
+def llm_judge(query, answer, evidence, client=None, model="gpt-4o-mini", cited_ids=None,
+              expected_behavior=None, score_relevance=True):
+    """Score all five dimensions. Costs two requests, not one: the four
+    evidence-only dimensions in the first, and ``relevance`` in the second,
+    for the interference reason documented above ``RELEVANCE_SYSTEM_PROMPT``.
+
+    Pass ``score_relevance=False`` to skip the second call and get the four
+    EO2 dimensions only."""
+    if client is None:
+        raise JudgeUnavailable(
+            "No OpenAI-compatible client was passed. Either provide a client "
+            "or call heuristic_judge() instead."
+        )
+    rubric = _json_call(client, model, JUDGE_SYSTEM_PROMPT, JUDGE_USER_TEMPLATE.format(
+        query=query, evidence=format_evidence(evidence), answer=answer))
+    judgement = normalize_judgement(rubric)
+
+    if score_relevance:
+        rel = _json_call(client, model, RELEVANCE_SYSTEM_PROMPT, RELEVANCE_USER_TEMPLATE.format(
+            query=query, answer=answer))
+        judgement["relevance"] = normalize_score(rel.get("relevance"))
+        judgement["better_tool"] = str(rel.get("better_tool", "") or "").strip()[:60]
+        if rel.get("rationale"):
+            judgement["rationale"] = f"{judgement['rationale']} Relevance: {rel['rationale']}"[:500]
+
+    return judgement
 
 
 def faithfulness_score(judgement):
@@ -218,3 +304,18 @@ def faithfulness_score(judgement):
     if isinstance(value, int):
         return float(value)
     return None
+
+
+def relevance_score(judgement):
+    """Pull the relevance number out of a judgement dict. Returns None when the
+    judge did not score it, which is what ``heuristic_judge`` always does."""
+    value = judgement.get("relevance")
+    if isinstance(value, int):
+        return float(value)
+    return None
+
+
+def better_tool(judgement):
+    """The command the judge says should have been used, or "" if it named none.
+    ``run_self_rag_loop`` uses this to build its retry query."""
+    return (judgement.get("better_tool") or "").strip()

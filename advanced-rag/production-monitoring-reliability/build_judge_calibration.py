@@ -510,6 +510,70 @@ CALIBRATION_EXAMPLES = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Advanced RAG 2 - relevance overlay.
+#
+# AR2 adds a fifth judge dimension, ``relevance``: does the answer use the
+# approach Git's own documentation would recommend for this question? It is
+# scored separately from the four EO2 dimensions and written to its own file,
+# keyed by ``example_id``, so ``judge_calibration_examples.jsonl`` stays exactly
+# as EO2 produced it. Same overlay pattern ``advanced_rag_cases.jsonl`` uses over
+# the eval set.
+#
+# Note how little this correlates with the other dimensions. Several rows fail
+# on faithfulness or citations while scoring 5 here, because they name the right
+# command and get something else wrong. Two rows score 1 because the command
+# itself is wrong. Three are not_applicable because the answer recommends no
+# command at all, which is the correct behaviour for a clarification or refusal.
+#
+# These are author judgements and need review before they are treated as
+# authoritative, exactly like the EO2 scores they sit alongside.
+# ---------------------------------------------------------------------------
+
+RELEVANCE_OVERLAY = [
+    {"example_id": "judge_pass_unstage", "relevance": 5, "better_tool": "",
+     "rationale": "git restore --staged is the documented way to unstage a file."},
+    {"example_id": "judge_partial_reset_warning", "relevance": 5, "better_tool": "",
+     "rationale": "git reset --hard is the right tool here. The missing warning is a command_safety problem, not a tool-choice one."},
+    {"example_id": "judge_fail_answer_fabricated_flag", "relevance": 1, "better_tool": "git branch -D",
+     "rationale": "git branch --purge does not exist. Deleting an unmerged branch is git branch -D, and reflog trimming is a separate git reflog expire."},
+    {"example_id": "judge_pass_clarify_branch_move", "relevance": "not_applicable", "better_tool": "",
+     "rationale": "The answer recommends no command, which is correct for an ambiguous request. There is no tool choice to score."},
+    {"example_id": "judge_partial_clarify_undo_commit", "relevance": 5, "better_tool": "",
+     "rationale": "git reset --soft HEAD~1 is the documented way to undo a commit while keeping changes staged."},
+    {"example_id": "judge_fail_clarify_delete_branch", "relevance": 5, "better_tool": "",
+     "rationale": "git branch -d and -D are the right commands. The failure is answering before clarifying, which refusal_correctness covers."},
+    {"example_id": "judge_pass_refuse_documentation_gap", "relevance": "not_applicable", "better_tool": "",
+     "rationale": "A refusal recommends no command, so there is no tool choice to score."},
+    {"example_id": "judge_partial_refuse_leaks_general_knowledge", "relevance": "not_applicable", "better_tool": "",
+     "rationale": "The answer drifts into webhooks rather than proposing a Git command. Nothing to score on tool choice."},
+    {"example_id": "judge_fail_unsupported_ssh", "relevance": 1, "better_tool": "git config core.sshCommand",
+     "rationale": "core.gitproxy is unrelated to SSH keys. core.sshCommand is the documented setting."},
+    {"example_id": "judge_pass_destructive_with_warning", "relevance": 5, "better_tool": "",
+     "rationale": "git reset --hard HEAD is the documented way to reset the working tree to HEAD."},
+    {"example_id": "judge_fail_invented_citation", "relevance": 5, "better_tool": "",
+     "rationale": "git branch -m is the right command. The invented citation is a citation_correctness problem."},
+    {"example_id": "judge_partial_subset_citation", "relevance": 5, "better_tool": "",
+     "rationale": "git remote add --tags is a real documented option for importing all tags."},
+    {"example_id": "judge_fail_injection_echo", "relevance": 5, "better_tool": "",
+     "rationale": "git commit -S is the correct command. Echoing the injection is a faithfulness problem."},
+    {"example_id": "judge_pass_multi_chunk_synthesis", "relevance": 5, "better_tool": "",
+     "rationale": "git remote add followed by git remote set-url is the documented sequence."},
+    {"example_id": "judge_partial_faithfulness_stretch", "relevance": 5, "better_tool": "",
+     "rationale": "git branch -a is the documented way to list local and remote-tracking branches."},
+]
+
+
+def check_overlay_covers_examples():
+    """Fail loudly if the overlay and the calibration set drift apart."""
+    base = [row["example_id"] for row in CALIBRATION_EXAMPLES]
+    overlay = [row["example_id"] for row in RELEVANCE_OVERLAY]
+    missing = [e for e in base if e not in overlay]
+    extra = [e for e in overlay if e not in base]
+    if missing or extra:
+        raise ValueError(f"relevance overlay out of sync. missing={missing} extra={extra}")
+
+
 def write_jsonl(path, rows):
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
@@ -527,18 +591,30 @@ def find_rag_dir():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Write judge calibration examples for EO2.")
+    parser = argparse.ArgumentParser(
+        description="Write judge calibration examples (EO2) and the relevance overlay (AR2).")
     parser.add_argument("--rag-dir", type=Path, default=None,
                         help="Directory containing generated_eval_artifacts/.")
     parser.add_argument("--output-name", default="judge_calibration_examples.jsonl",
                         help="File name for the calibration set inside generated_eval_artifacts/.")
+    parser.add_argument("--relevance-output-name", default="judge_calibration_relevance.jsonl",
+                        help="File name for the AR2 relevance overlay, keyed by example_id.")
+    parser.add_argument("--skip-relevance", action="store_true",
+                        help="Write only the EO2 calibration set, without the AR2 overlay.")
     args = parser.parse_args()
 
     rag_dir = args.rag_dir or find_rag_dir()
-    output_path = rag_dir / "generated_eval_artifacts" / args.output_name
-    write_jsonl(output_path, CALIBRATION_EXAMPLES)
+    artifact_dir = rag_dir / "generated_eval_artifacts"
 
+    output_path = artifact_dir / args.output_name
+    write_jsonl(output_path, CALIBRATION_EXAMPLES)
     print(f"Wrote {len(CALIBRATION_EXAMPLES)} calibration examples to {output_path}")
+
+    if not args.skip_relevance:
+        check_overlay_covers_examples()
+        relevance_path = artifact_dir / args.relevance_output_name
+        write_jsonl(relevance_path, RELEVANCE_OVERLAY)
+        print(f"Wrote {len(RELEVANCE_OVERLAY)} relevance overlay rows to {relevance_path}")
 
 
 if __name__ == "__main__":

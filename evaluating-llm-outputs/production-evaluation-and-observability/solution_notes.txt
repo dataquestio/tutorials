@@ -1,0 +1,64 @@
+EO3 AUTHORING NOTES
+Delete before shipping the lesson.
+
+
+WHAT TO DO
+
+Teach the 15-field run log, threshold alerts, baseline-versus-current comparison,
+and drift. Two new files: monitoring.py and build_baseline_logs.py.
+
+Use make_degraded_copy for every regression screen. It is deterministic, so the
+numbers on the page match what the learner sees, and it needs no API calls.
+
+Leave faithfulness thresholds alone. DEFAULT_THRESHOLDS deliberately configures
+none, so a faithfulness drop shows up here as a summary number that moved without
+raising an alert. AR3 adds the threshold that turns it into one. Adding it here
+removes AR3's move.
+
+
+ASSUMPTIONS
+
+- Full corpus from EO2 onward. Latency, token, and cost numbers are only realistic
+  there.
+- Every generated field is a deterministic function of the item and its index. Do
+  not introduce randomness or timestamps.
+- The shared run-log contract is 14 fields. build_baseline_logs adds `notes`;
+  gitquest.build_run_log adds `judgement`. Both emit 15, but not the same 15.
+  Nothing consumes the 15th: monitoring reads only metrics, latency_ms, and
+  estimated_cost_usd.
+- check_thresholds here hardcodes five checks and ignores any threshold key it does
+  not know. Fine, because DEFAULT_THRESHOLDS only contains keys it checks.
+- Baseline faithfulness averages 4.65 by construction, so it clears AR3's 4.0
+  threshold with visible headroom. If you change the synthetic values, keep that
+  true and keep the degraded copy below 4.0.
+
+
+EXPECTED RESULT
+
+24 baseline run logs, reproducible on a rerun.
+
+Baseline is clean under DEFAULT_THRESHOLDS. The degraded copy raises 3 alerts:
+answerability, citation precision, p95 latency.
+
+avg_faithfulness_score moves 4.65 -> 3.45 between baseline and degraded, visible in
+the summary, with no alert. That is the intended setup for AR3.
+
+
+SIGNATURES
+
+Easy to get wrong when writing screens or test code:
+
+  dashboard(runs)                run logs, not a summary
+  time_series_drift(snapshots)   a list of (label, runs) tuples
+  compare_models(named_runs)     {model_name: [run, ...]}
+
+
+BLOCKED BEFORE SHIPPING
+
+1. Two run-log variants from genuinely different generator configs, for the
+   model-comparison screens. make_degraded_copy is a synthetic stand-in and should
+   not be presented as a model comparison.
+2. Three to five timestamped snapshots showing a metric degrade, for the drift
+   screens. This builder emits one point-in-time set.
+
+Neither blocks authoring the other screens.

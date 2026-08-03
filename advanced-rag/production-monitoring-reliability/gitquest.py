@@ -7,7 +7,7 @@ import time
 from openai import OpenAI
 from dotenv import load_dotenv
 
-from judge import faithfulness_score, heuristic_judge
+from judge import better_tool, faithfulness_score, heuristic_judge, relevance_score
 
 load_dotenv()
 
@@ -166,7 +166,8 @@ def build_context(chunks):
 
 
 def parse_citations(raw_answer, retrieved_chunks):
-    valid_ids = {c["chunk_id"] for c in retrieved_chunks}
+    by_id = {c["chunk_id"]: c for c in retrieved_chunks}
+    valid_ids = set(by_id)
     cited = []
     dropped = []
     # Normalize case variants before parsing to avoid false negatives
@@ -178,12 +179,16 @@ def parse_citations(raw_answer, retrieved_chunks):
             if "chunk_id:" in line:
                 cited_id = line.split("chunk_id:")[1].split("|")[0].strip()
                 if cited_id in valid_ids:
-                    chunk = corpus[cited_id]
+                    # A cited id can be in the retrieved set without being in the
+                    # corpus: injected overlay docs carry their own ids. Fall back
+                    # to the retrieved chunk itself so citing untrusted content
+                    # reports cleanly instead of raising KeyError.
+                    chunk = corpus.get(cited_id) or by_id[cited_id]
                     cited.append({
                         "chunk_id": cited_id,
-                        "title": chunk["title"],
-                        "command": chunk["command"],
-                        "source_type": chunk["source_type"]
+                        "title": chunk.get("title"),
+                        "command": chunk.get("command"),
+                        "source_type": chunk.get("source_type"),
                     })
                 else:
                     dropped.append(cited_id)
@@ -223,7 +228,7 @@ def select_chunks_within_budget(chunks, token_budget=6000):
     return selected
 
 
-PIPELINE_VERSION = "gitquest_ar1_v1"
+PIPELINE_VERSION = "gitquest_ar2_v1"
 
 # USD per 1K tokens for gpt-4o-mini (input / output).
 INPUT_USD_PER_K = float(os.getenv("GITQUEST_INPUT_USD_PER_K", "0.00015"))
@@ -555,10 +560,20 @@ def ask_gitquest_secured(query, injected_docs=None, n_results=10, token_budget=6
 # ---------------------------------------------------------------------------
 # Advanced RAG 2 - Self-RAG additions
 #
-# Draft -> judge -> decide loop. The first answer is scored by the judge
-# (heuristic by default, swappable for llm_judge). A decision rule
-# combines the judge faithfulness score and retrieval coverage to pick the
-# next action: answer, clarify, refuse, retrieve_again.
+# Draft -> judge -> decide loop. The first answer is scored by the judge, and
+# the judge's ``relevance`` score decides whether to retrieve again. When it
+# fires, the judge's ``better_tool`` field supplies the missing vocabulary for
+# the retry query, so the evaluator both diagnoses the problem and directs the
+# fix.
+#
+# The default judge is ``heuristic_judge``, which returns "not_applicable" for
+# relevance and therefore never triggers a retry. That is deliberate: it is the
+# offline dry run, and its inability to decide is what motivates passing a live
+# ``llm_judge`` instead. To run the loop for real:
+#
+#     from functools import partial
+#     from judge import llm_judge
+#     run_self_rag_loop(query, judge=partial(llm_judge, client=oai))
 # ---------------------------------------------------------------------------
 
 DECISION_ANSWER = "answer"
@@ -566,65 +581,74 @@ DECISION_CLARIFY = "clarify"
 DECISION_REFUSE = "refuse"
 DECISION_RETRIEVE_AGAIN = "retrieve_again"
 
-SELF_RAG_FAITHFULNESS_THRESHOLD = 3
+# Relevance is scored 1-5, where 3 means "workable, but a better-suited command
+# exists". A retry should fire on 3, so the threshold is 4.
+SELF_RAG_RELEVANCE_THRESHOLD = 4
 DEFAULT_MAX_RETRIES = 1
 
 
 def decide_next_action(judgement, retrieved_ids, required_ids, expected_behavior):
-    """Combine the judge score and retrieval coverage into a next action.
+    """Turn a judgement into a next action.
 
     Rule order matters:
       1. If the eval contract marks the item ``refuse``, refuse.
-      2. If required evidence is missing from retrieval, retrieve_again.
-      3. If the judge's faithfulness score is below the threshold, retrieve_again.
-      4. If the eval contract marks the item ``clarify``, clarify.
-      5. Otherwise answer.
+      2. If the judge's relevance score is below the threshold, retrieve_again.
+      3. If the eval contract marks the item ``clarify``, clarify.
+      4. Otherwise answer.
+
+    ``required_ids`` is NOT a trigger. Retrying whenever the answer key is
+    missing from retrieval fails in both directions: it fires even when the
+    answer is already correct, and a real user query has no answer key at all,
+    so it would never fire in production. It is still computed and reported as
+    ``missing_evidence``, because comparing "answer key retrieved" against
+    "relevance" side by side is how you see that a retrieval metric can report
+    failure for a system that answered correctly.
     """
     retrieved = set(retrieved_ids or [])
     required = set(required_ids or [])
-    faith = faithfulness_score(judgement)
+    missing = sorted(required - retrieved)
+    relevance = relevance_score(judgement)
+    tool = better_tool(judgement)
+
+    def outcome(decision, reason):
+        return {"decision": decision, "reason": reason,
+                "missing_evidence": missing, "better_tool": tool}
 
     if expected_behavior == DECISION_REFUSE:
-        return {"decision": DECISION_REFUSE,
-                "reason": "Eval contract marks the item unanswerable.",
-                "missing_evidence": []}
+        return outcome(DECISION_REFUSE, "Eval contract marks the item unanswerable.")
 
-    if required and not required.issubset(retrieved):
-        return {"decision": DECISION_RETRIEVE_AGAIN,
-                "reason": "Required evidence is missing from the current retrieval set.",
-                "missing_evidence": sorted(required - retrieved)}
+    if relevance is None:
+        return outcome(
+            DECISION_ANSWER,
+            "Judge did not score relevance, so the loop cannot decide to retry. "
+            "This is what the heuristic judge always does.")
 
-    if faith is not None and faith < SELF_RAG_FAITHFULNESS_THRESHOLD:
-        return {"decision": DECISION_RETRIEVE_AGAIN,
-                "reason": f"Draft answer faithfulness is too low (score {faith}).",
-                "missing_evidence": []}
+    if relevance < SELF_RAG_RELEVANCE_THRESHOLD:
+        hint = f" Judge suggests {tool!r}." if tool else " Judge named no better command."
+        return outcome(
+            DECISION_RETRIEVE_AGAIN,
+            f"Answer relevance is too low (score {relevance:g}).{hint}")
 
     if expected_behavior == DECISION_CLARIFY:
-        return {"decision": DECISION_CLARIFY,
-                "reason": "Query lacks enough detail for a safe, specific answer.",
-                "missing_evidence": []}
+        return outcome(DECISION_CLARIFY, "Query lacks enough detail for a safe, specific answer.")
 
-    return {"decision": DECISION_ANSWER,
-            "reason": "Required evidence is available and the judge accepted the draft.",
-            "missing_evidence": []}
+    return outcome(DECISION_ANSWER, "The judge accepted the draft as the recommended approach.")
 
 
-def make_retry_query(query, tags=None):
-    """Heuristic vocabulary widening when a retry is needed.
+def make_retry_query(query, better_tool_hint=None):
+    """Build the retry query from the judge's ``better_tool`` suggestion.
 
-    In a live system you would rerun the LLM-powered query expansion with a
-    stricter prompt; this heuristic widening keeps the lesson reproducible."""
-    tag_set = set(tags or [])
-    if "cmd:remote" in tag_set:
-        return f"{query} remote URL set-url origin"
-    if "cmd:cherry-pick" in tag_set:
-        return f"{query} git cherry-pick apply commit"
-    if "cmd:restore" in tag_set:
-        return f"{query} git restore staged index"
-    return f"{query} official Git command syntax"
+    Returns ``None`` when there is nothing to add, which tells the loop to stop
+    rather than spend a second pipeline pass on an identical query. Letting the
+    judge name the missing tool means this works on any query, rather than only
+    on cases carrying a known tag."""
+    hint = (better_tool_hint or "").strip()
+    if not hint or hint.lower() in query.lower():
+        return None
+    return f"{query} {hint}"
 
 
-def run_self_rag_loop(query, injected_docs=None, required_ids=None, tags=None,
+def run_self_rag_loop(query, injected_docs=None, required_ids=None,
                       expected_behavior=None, judge=None, max_retries=DEFAULT_MAX_RETRIES):
     """Draft -> judge -> decide loop, up to ``max_retries`` retries.
 
@@ -665,6 +689,10 @@ def run_self_rag_loop(query, injected_docs=None, required_ids=None, tags=None,
             break
         if attempt >= max_retries:
             break
-        current_query = make_retry_query(current_query, tags)
+        next_query = make_retry_query(current_query, action.get("better_tool"))
+        if next_query is None:
+            # Nothing new to search for, so a second pass would repeat the first.
+            break
+        current_query = next_query
 
     return history

@@ -91,6 +91,11 @@ def default_rag_dir():
 
 
 def evidence_payload(chunk_ids):
+    """Hydrate corpus chunk ids into judge-shaped evidence dicts.
+
+    Use this for curated evidence, for example when you want to inspect what a
+    case's answer key actually contains. Do NOT pass the result to a judge as the
+    ``evidence`` argument: see the note above ``secured_pipeline_handler``."""
     payload = []
     for chunk_id in chunk_ids:
         if chunk_id in corpus:
@@ -118,12 +123,19 @@ def self_rag_retry_handler(case, config):
     history = run_self_rag_loop(
         query=case["user_query"],
         required_ids=trusted_ids,
-        tags=case.get("tags") or [],
         expected_behavior=case["expected_behavior"],
     )
     return history[-1]["result"], history[-1]["judgement"]
 
 
+# A judge's ``evidence`` argument must be what the model actually saw, never the
+# case's answer key. Faithfulness is defined as "are the cited ids a subset of the
+# supplied evidence", so handing it the answer key instead asks a different
+# question: "did the pipeline cite the chunks we expected?" That is citation
+# precision, which score_item already measures against `required_citations`.
+#
+# Retrieval recall and citation metrics DO belong against the answer key. Only
+# faithfulness belongs against the retrieved context. Keep the two separate.
 def secured_pipeline_handler(case, config):
     result = ask_gitquest_secured(
         query=case["user_query"],
@@ -132,11 +144,10 @@ def secured_pipeline_handler(case, config):
         token_budget=config.get("token_budget", 6000),
         model=config.get("model", "gpt-4o-mini"),
     )
-    trusted_ids = [ev["chunk_id"] for ev in case.get("trusted_evidence", [])]
     judgement = heuristic_judge(
         query=case["user_query"],
         answer=result["answer"],
-        evidence=evidence_payload(trusted_ids),
+        evidence=result["retrieved_chunks"],
         cited_ids=[c["chunk_id"] for c in result["citations"]],
         expected_behavior=case["expected_behavior"],
     )
@@ -178,11 +189,16 @@ class ProductionHarness:
             "tags": item.get("tags") or [],
         }
 
+    # Curated eval items carry expected_behavior values mapped from answerability:
+    # "answer", "clarify", or "refuse". "retrieve_again" is part of the documented
+    # taxonomy but is never assigned to a curated item, so eval items always take
+    # the default handler. Register a handler under this name to override.
+    EVAL_ITEM_CASE_TYPE = "default"
+
     def run_eval_item(self, item):
         """Run a curated eval item through the registered handler and score it."""
-        case_type = "self_rag_retry" if item.get("expected_behavior") == "retrieve_again" else "default"
         case = self._normalise_eval_item(item)
-        result, judgement = self._resolve_handler(case_type)(case, self.config)
+        result, judgement = self._resolve_handler(self.EVAL_ITEM_CASE_TYPE)(case, self.config)
 
         metrics = score_item(item, result)
         metrics["faithfulness_score"] = faithfulness_score(judgement)
