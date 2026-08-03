@@ -1,7 +1,7 @@
 """Foundation evaluation metrics for the GitQuest pipeline.
 
 Computes the retrieval, citation, lexical, and answerability metrics
-introduced in Evaluating LLM Outputs 1. Reads runs and the curated eval
+introduced in Foundation Metrics and Evaluation Frameworks. Reads runs and the curated eval
 set from JSONL files and prints aggregate scores.
 
 Usage:

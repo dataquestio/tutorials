@@ -1,14 +1,14 @@
-"""Evaluating LLM Outputs 3 - Production monitoring helpers.
+"""Production monitoring helpers.
 
 Consumes Run Log entries in the shape emitted by
-``gitquest.build_run_log``. Demonstrates:
+`gitquest.build_run_log`. Demonstrates:
 
 - aggregate metric summaries over a batch run (answerability accuracy,
   citation precision/recall, average faithfulness, p95 latency, average
   and total cost)
-- threshold-based alerting against ``DEFAULT_THRESHOLDS``
+- threshold-based alerting against `DEFAULT_THRESHOLDS`
 - baseline-versus-current comparison with per-metric deltas
-- a deterministic ``make_degraded_copy`` helper that synthesises a
+- a deterministic `make_degraded_copy` helper that synthesises a
   degraded current run from the baseline so the lesson can demonstrate
   regressions without depending on live API calls
 

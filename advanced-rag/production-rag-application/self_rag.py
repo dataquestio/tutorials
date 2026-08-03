@@ -1,9 +1,9 @@
-"""Advanced RAG 2 - Self-RAG driver.
+"""Self-RAG driver.
 
 Runs the draft -> judge -> decide loop introduced in
-``gitquest.run_self_rag_loop`` against:
+`gitquest.run_self_rag_loop` against:
 
-1. The ``self_rag_retry`` subset of ``advanced_rag_cases.jsonl`` (built in
+1. The `self_rag_retry` subset of `advanced_rag_cases.jsonl` (built in
    EO1) - cases where the first retrieval is intentionally too narrow.
 2. A small sample of curated eval items so the lesson shows the loop on
    ordinary answer / clarify / refuse queries too.
@@ -70,7 +70,7 @@ def load_bundle(artifact_dir, eval_sample_size=4):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run the Advanced RAG 2 Self-RAG loop on cases and eval items.")
+    parser = argparse.ArgumentParser(description="Run the Self-RAG loop on cases and eval items.")
     parser.add_argument("--rag-dir", type=Path, default=default_rag_dir())
     parser.add_argument("--eval-sample-size", type=int, default=4)
     parser.add_argument("--dry-run", action="store_true",

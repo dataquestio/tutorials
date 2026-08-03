@@ -1,12 +1,12 @@
-"""Evaluating LLM Outputs 3 - Baseline run-log builder.
+"""Baseline run-log builder.
 
-Generates a synthetic ``baseline_run_logs.jsonl`` file in the 15-field
-Run Log shape. The file is consumed by ``monitoring.py`` to teach
+Generates a synthetic `baseline_run_logs.jsonl` file in the 15-field
+Run Log shape. The file is consumed by `monitoring.py` to teach
 baseline-versus-current comparison, threshold alerts, and drift
 detection in EO3, and by the Advanced RAG monitoring lesson later.
 
 Each generated row is built directly from the EO1 curated eval set so
-the ``query_id``s match the ones EO/AR use everywhere else.
+the `query_id`s match the ones EO/AR use everywhere else.
 
 Usage:
     python build_baseline_logs.py --rag-dir <path/to/rag>

@@ -3,23 +3,23 @@
 Adds production-scale concepts on top of the monitoring helpers you already
 have:
 
-- ``PRODUCTION_THRESHOLDS`` - tighter SLOs than ``DEFAULT_THRESHOLDS``
-- ``compare_models`` - A/B-style report across multiple named run sets
-- ``time_series_drift`` - per-snapshot drift detection for a sequence of
+- `PRODUCTION_THRESHOLDS` - tighter SLOs than `DEFAULT_THRESHOLDS`
+- `compare_models` - A/B-style report across multiple named run sets
+- `time_series_drift` - per-snapshot drift detection for a sequence of
   baselines (e.g. nightly runs)
-- ``regressions_by_slice`` - per-case-type regression breakdown, so you can
+- `regressions_by_slice` - per-case-type regression breakdown, so you can
   see which slice broke rather than only an overall delta
 
-``check_thresholds`` is also rewritten here, in two ways:
+`check_thresholds` is also rewritten here, in two ways:
 
-- it honours any threshold key present, so ``min_avg_faithfulness_score``
-  from ``PRODUCTION_THRESHOLDS`` is actually checked
+- it honours any threshold key present, so `min_avg_faithfulness_score`
+  from `PRODUCTION_THRESHOLDS` is actually checked
 - a configured threshold whose metric is absent now raises
-  ``<metric>_not_measured`` instead of being skipped silently
+  `<metric>_not_measured` instead of being skipped silently
 
-Every other helper (``summarize_runs``, ``compare_summaries``,
-``regression_signals``, ``slice_by_tag``, ``dashboard``,
-``make_degraded_copy``) is unchanged, so anything already calling them keeps
+Every other helper (`summarize_runs`, `compare_summaries`,
+`regression_signals`, `slice_by_tag`, `dashboard`,
+`make_degraded_copy`) is unchanged, so anything already calling them keeps
 working.
 """
 
@@ -218,7 +218,7 @@ def make_degraded_copy(runs):
 def compare_models(named_runs):
     """A/B-style report across multiple named run sets.
 
-    ``named_runs`` is a dict of ``{model_name: [run, ...]}``. Returns a
+    `named_runs` is a dict of `{model_name: [run, ...]}`. Returns a
     dict with per-model summaries, the metric deltas relative to the first
     model, and a list of clear winners per metric."""
     summaries = {name: summarize_runs(runs) for name, runs in named_runs.items()}

@@ -1,12 +1,12 @@
-"""Evaluating LLM Outputs 2 - Judge calibration examples builder.
+"""Judge calibration examples builder.
 
-Produces ``judge_calibration_examples.jsonl`` next to the EO1 artifacts.
+Produces `judge_calibration_examples.jsonl` next to the EO1 artifacts.
 Each example is a fixed (query, evidence, answer) triple with the score
 the lesson author expects across faithfulness, citation correctness,
 command safety, and refusal correctness. Learners compare the heuristic
 and live LLM judge against these targets to inspect calibration delta.
 
-The set spans ``expected_behavior`` (answer / clarify / refuse) crossed
+The set spans `expected_behavior` (answer / clarify / refuse) crossed
 with pass / partial / fail quality bands, plus six rubric-dimension
 stressors so every score value the heuristic can emit (and several a
 human would emit but the heuristic cannot) is represented at least once.

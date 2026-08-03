@@ -1,4 +1,4 @@
-"""Evaluating LLM Outputs 1 - Foundation Metrics and Evaluation Frameworks.
+"""Foundation Metrics and Evaluation Frameworks.
 
 Deterministic builder that turns the seed `git_support_eval/eval.jsonl` into
 the foundational evaluation artifacts EO and AR both consume:

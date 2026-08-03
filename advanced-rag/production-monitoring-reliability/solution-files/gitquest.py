@@ -558,18 +558,18 @@ def ask_gitquest_secured(query, injected_docs=None, n_results=10, token_budget=6
 
 
 # ---------------------------------------------------------------------------
-# Advanced RAG 2 - Self-RAG additions
+# Self-RAG additions
 #
 # Draft -> judge -> decide loop. The first answer is scored by the judge, and
-# the judge's ``relevance`` score decides whether to retrieve again. When it
-# fires, the judge's ``better_tool`` field supplies the missing vocabulary for
+# the judge's `relevance` score decides whether to retrieve again. When it
+# fires, the judge's `better_tool` field supplies the missing vocabulary for
 # the retry query, so the evaluator both diagnoses the problem and directs the
 # fix.
 #
-# The default judge is ``heuristic_judge``, which returns "not_applicable" for
+# The default judge is `heuristic_judge`, which returns "not_applicable" for
 # relevance and therefore never triggers a retry. That is deliberate: it is the
 # offline dry run, and its inability to decide is what motivates passing a live
-# ``llm_judge`` instead. To run the loop for real:
+# `llm_judge` instead. To run the loop for real:
 #
 #     from functools import partial
 #     from judge import llm_judge
@@ -591,16 +591,16 @@ def decide_next_action(judgement, retrieved_ids, required_ids, expected_behavior
     """Turn a judgement into a next action.
 
     Rule order matters:
-      1. If the eval contract marks the item ``refuse``, refuse.
+      1. If the eval contract marks the item `refuse`, refuse.
       2. If the judge's relevance score is below the threshold, retrieve_again.
-      3. If the eval contract marks the item ``clarify``, clarify.
+      3. If the eval contract marks the item `clarify`, clarify.
       4. Otherwise answer.
 
-    ``required_ids`` is NOT a trigger. Retrying whenever the answer key is
+    `required_ids` is NOT a trigger. Retrying whenever the answer key is
     missing from retrieval fails in both directions: it fires even when the
     answer is already correct, and a real user query has no answer key at all,
     so it would never fire in production. It is still computed and reported as
-    ``missing_evidence``, because comparing "answer key retrieved" against
+    `missing_evidence`, because comparing "answer key retrieved" against
     "relevance" side by side is how you see that a retrieval metric can report
     failure for a system that answered correctly.
     """
@@ -636,9 +636,9 @@ def decide_next_action(judgement, retrieved_ids, required_ids, expected_behavior
 
 
 def make_retry_query(query, better_tool_hint=None):
-    """Build the retry query from the judge's ``better_tool`` suggestion.
+    """Build the retry query from the judge's `better_tool` suggestion.
 
-    Returns ``None`` when there is nothing to add, which tells the loop to stop
+    Returns `None` when there is nothing to add, which tells the loop to stop
     rather than spend a second pipeline pass on an identical query. Letting the
     judge name the missing tool means this works on any query, rather than only
     on cases carrying a known tag."""
@@ -650,7 +650,7 @@ def make_retry_query(query, better_tool_hint=None):
 
 def run_self_rag_loop(query, injected_docs=None, required_ids=None,
                       expected_behavior=None, judge=None, max_retries=DEFAULT_MAX_RETRIES):
-    """Draft -> judge -> decide loop, up to ``max_retries`` retries.
+    """Draft -> judge -> decide loop, up to `max_retries` retries.
 
     Each attempt returns a record so lessons can show the full trace rather
     than only the final answer."""

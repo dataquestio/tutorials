@@ -1,12 +1,12 @@
-"""Evidence-aware LLM-as-judge helper introduced in Evaluating LLM Outputs 2,
-extended in Advanced RAG 2 with a ``relevance`` dimension.
+"""Evidence-aware LLM-as-judge helper introduced in LLM-as-Judge and Automated Evaluation,
+extended in Self-RAG and Autonomous Evaluation with a `relevance` dimension.
 
 Exposes two callables:
 
-- ``llm_judge(query, answer, evidence, ...)`` calls an OpenAI-compatible
-  chat model and parses its JSON response. Raises ``JudgeUnavailable`` when
+- `llm_judge(query, answer, evidence, ...)` calls an OpenAI-compatible
+  chat model and parses its JSON response. Raises `JudgeUnavailable` when
   no client is configured so callers can decide whether to skip or fall back.
-- ``heuristic_judge(query, answer, evidence, ...)`` deterministic fallback
+- `heuristic_judge(query, answer, evidence, ...)` deterministic fallback
   that scores faithfulness, citation correctness, command safety, and
   refusal correctness using transparent rules. Useful for offline lessons
   and CI tests that need stable numbers.
@@ -24,30 +24,30 @@ without changing downstream code::
       "rationale": "..."
     }
 
-``relevance`` is the dimension Advanced RAG 2 adds, and it is deliberately
+`relevance` is the dimension this lesson adds, and it is deliberately
 different from the other four:
 
-- The other four are scored against the SUPPLIED EVIDENCE ONLY. ``relevance``
+- The other four are scored against the SUPPLIED EVIDENCE ONLY. `relevance`
   may use the model's own Git knowledge. That exception exists because it
   drives a *decision* (should the pipeline retrieve again?) rather than
   assigning a grade. An evidence-only judge cannot notice that the retrieved
   evidence was the wrong evidence: if the answer is supported by what it was
   given, it passes.
 - It is scored by a **second request**, not another key in
-  ``JUDGE_SYSTEM_PROMPT``. An instruction that contradicts the rest of a prompt
+  `JUDGE_SYSTEM_PROMPT`. An instruction that contradicts the rest of a prompt
   tends to lose to it, so the exception gets a request of its own. That means
-  ``llm_judge`` costs two requests per judgement.
-- ``heuristic_judge`` returns ``"not_applicable"`` for it, because a
+  `llm_judge` costs two requests per judgement.
+- `heuristic_judge` returns `"not_applicable"` for it, because a
   substring rule cannot decide whether a better-suited Git command exists.
   That is the point, not a gap to fill: it is why the self-RAG loop needs a
   live judge rather than the offline one.
-- When ``relevance`` is below 5, ``better_tool`` names the command that
-  should have been used. ``run_self_rag_loop`` builds its retry query from
+- When `relevance` is below 5, `better_tool` names the command that
+  should have been used. `run_self_rag_loop` builds its retry query from
   that field, so the judge both diagnoses the problem and directs the fix.
 
 If a dimension is added in one implementation, add it to the other, to
-``JUDGE_SYSTEM_PROMPT``, and to the calibration examples emitted by
-``build_judge_calibration.py``.
+`JUDGE_SYSTEM_PROMPT`, and to the calibration examples emitted by
+`build_judge_calibration.py`.
 """
 
 import json
@@ -91,7 +91,7 @@ ANSWER TO EVALUATE:
 
 
 # ---------------------------------------------------------------------------
-# Advanced RAG 2 - the relevance dimension, scored by its own call.
+# The relevance dimension, scored by its own call.
 #
 # This is a separate request rather than a sixth key in JUDGE_SYSTEM_PROMPT
 # because that prompt's opening instruction, "Score the answer against the
@@ -272,10 +272,10 @@ def _json_call(client, model, system_prompt, user_prompt):
 def llm_judge(query, answer, evidence, client=None, model="gpt-4o-mini", cited_ids=None,
               expected_behavior=None, score_relevance=True):
     """Score all five dimensions. Costs two requests, not one: the four
-    evidence-only dimensions in the first, and ``relevance`` in the second,
-    for the interference reason documented above ``RELEVANCE_SYSTEM_PROMPT``.
+    evidence-only dimensions in the first, and `relevance` in the second,
+    for the interference reason documented above `RELEVANCE_SYSTEM_PROMPT`.
 
-    Pass ``score_relevance=False`` to skip the second call and get the four
+    Pass `score_relevance=False` to skip the second call and get the four
     EO2 dimensions only."""
     if client is None:
         raise JudgeUnavailable(
@@ -308,7 +308,7 @@ def faithfulness_score(judgement):
 
 def relevance_score(judgement):
     """Pull the relevance number out of a judgement dict. Returns None when the
-    judge did not score it, which is what ``heuristic_judge`` always does."""
+    judge did not score it, which is what `heuristic_judge` always does."""
     value = judgement.get("relevance")
     if isinstance(value, int):
         return float(value)
@@ -317,5 +317,5 @@ def relevance_score(judgement):
 
 def better_tool(judgement):
     """The command the judge says should have been used, or "" if it named none.
-    ``run_self_rag_loop`` uses this to build its retry query."""
+    `run_self_rag_loop` uses this to build its retry query."""
     return (judgement.get("better_tool") or "").strip()
