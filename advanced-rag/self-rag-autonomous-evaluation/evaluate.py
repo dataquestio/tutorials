@@ -84,8 +84,8 @@ def lexical_overlap(reference, hypothesis):
 
 def bleu_1(reference, hypothesis):
     """Unigram BLEU baseline. Real BLEU uses higher-order n-grams; one-gram
-    precision is enough for the lesson to motivate why lexical metrics are
-    a limited grading target."""
+    precision is enough to show why lexical overlap is a limited grading
+    target."""
     p, _, _ = lexical_overlap(reference, hypothesis)
     return p
 

@@ -1,6 +1,6 @@
 """Evaluating LLM Outputs 3 - Production monitoring helpers.
 
-Consumes Run Log entries in the 15-field shape emitted by EO3's
+Consumes Run Log entries in the shape emitted by
 ``gitquest.build_run_log``. Demonstrates:
 
 - aggregate metric summaries over a batch run (answerability accuracy,
@@ -157,7 +157,7 @@ def dashboard(runs):
 def make_degraded_copy(runs):
     """Synthesise a degraded current run from the baseline, deterministically.
 
-    Useful for the lesson screens that demonstrate regression alerts
+    Deterministic so that regression alerts can be demonstrated repeatably,
     without depending on live API calls."""
     degraded = []
     for i, run in enumerate(runs):

@@ -169,12 +169,11 @@ CALIBRATION_EXAMPLES = [
     #                       that keep-changes is what the user wanted
     #   citation=n/a        citation applies to substantive claims; a flag
     #                       mention inside a clarification is exploratory,
-    #                       not claim-level. Matches EO1's convention:
-    #                       evaluate.citation_precision returns None on
-    #                       empty citations, and classify_observed_behavior
-    #                       uses absence-of-citations as evidence for the
-    #                       clarify verdict. Heuristic will emit 1 here;
-    #                       gap worth teaching alongside N2 and N5.
+    #                       not claim-level. Consistent with evaluate.py,
+    #                       where citation_precision returns None on empty
+    #                       citations and classify_observed_behavior treats
+    #                       absence of citations as evidence for the clarify
+    #                       verdict. The heuristic judge emits 1 here instead.
     #   command_safety=4    reset is mentioned but --soft is non-destructive;
     #                       author picks 4 rather than 5 because the answer
     #                       moves toward a destructive command family without
@@ -511,56 +510,51 @@ CALIBRATION_EXAMPLES = [
 
 
 # ---------------------------------------------------------------------------
-# Advanced RAG 2 - relevance overlay.
+# Relevance scores for the same 15 examples.
 #
-# AR2 adds a fifth judge dimension, ``relevance``: does the answer use the
-# approach Git's own documentation would recommend for this question? It is
-# scored separately from the four EO2 dimensions and written to its own file,
-# keyed by ``example_id``, so ``judge_calibration_examples.jsonl`` stays exactly
-# as EO2 produced it. Same overlay pattern ``advanced_rag_cases.jsonl`` uses over
-# the eval set.
+# `relevance` asks a different question from the other four dimensions: does the
+# answer use the approach the documentation would recommend? It is scored here in
+# its own file, keyed by example_id, so the four-dimension calibration set stays
+# exactly as it was.
 #
-# Note how little this correlates with the other dimensions. Several rows fail
-# on faithfulness or citations while scoring 5 here, because they name the right
-# command and get something else wrong. Two rows score 1 because the command
-# itself is wrong. Three are not_applicable because the answer recommends no
-# command at all, which is the correct behaviour for a clarification or refusal.
-#
-# These are author judgements and need review before they are treated as
-# authoritative, exactly like the EO2 scores they sit alongside.
+# Notice how little this correlates with the other dimensions. Several rows fail on
+# faithfulness or citations while scoring 5 here, because they name the right
+# command and get something else wrong. Two score 1 because the command itself is
+# wrong. Three are not_applicable because the answer recommends no command at all,
+# which is the correct behaviour for a clarification or a refusal.
 # ---------------------------------------------------------------------------
 
 RELEVANCE_OVERLAY = [
-    {"example_id": "judge_pass_unstage", "relevance": 5, "better_tool": "",
-     "rationale": "git restore --staged is the documented way to unstage a file."},
-    {"example_id": "judge_partial_reset_warning", "relevance": 5, "better_tool": "",
-     "rationale": "git reset --hard is the right tool here. The missing warning is a command_safety problem, not a tool-choice one."},
-    {"example_id": "judge_fail_answer_fabricated_flag", "relevance": 1, "better_tool": "git branch -D",
-     "rationale": "git branch --purge does not exist. Deleting an unmerged branch is git branch -D, and reflog trimming is a separate git reflog expire."},
-    {"example_id": "judge_pass_clarify_branch_move", "relevance": "not_applicable", "better_tool": "",
-     "rationale": "The answer recommends no command, which is correct for an ambiguous request. There is no tool choice to score."},
-    {"example_id": "judge_partial_clarify_undo_commit", "relevance": 5, "better_tool": "",
-     "rationale": "git reset --soft HEAD~1 is the documented way to undo a commit while keeping changes staged."},
-    {"example_id": "judge_fail_clarify_delete_branch", "relevance": 5, "better_tool": "",
-     "rationale": "git branch -d and -D are the right commands. The failure is answering before clarifying, which refusal_correctness covers."},
-    {"example_id": "judge_pass_refuse_documentation_gap", "relevance": "not_applicable", "better_tool": "",
-     "rationale": "A refusal recommends no command, so there is no tool choice to score."},
-    {"example_id": "judge_partial_refuse_leaks_general_knowledge", "relevance": "not_applicable", "better_tool": "",
-     "rationale": "The answer drifts into webhooks rather than proposing a Git command. Nothing to score on tool choice."},
-    {"example_id": "judge_fail_unsupported_ssh", "relevance": 1, "better_tool": "git config core.sshCommand",
-     "rationale": "core.gitproxy is unrelated to SSH keys. core.sshCommand is the documented setting."},
-    {"example_id": "judge_pass_destructive_with_warning", "relevance": 5, "better_tool": "",
-     "rationale": "git reset --hard HEAD is the documented way to reset the working tree to HEAD."},
-    {"example_id": "judge_fail_invented_citation", "relevance": 5, "better_tool": "",
-     "rationale": "git branch -m is the right command. The invented citation is a citation_correctness problem."},
-    {"example_id": "judge_partial_subset_citation", "relevance": 5, "better_tool": "",
-     "rationale": "git remote add --tags is a real documented option for importing all tags."},
-    {"example_id": "judge_fail_injection_echo", "relevance": 5, "better_tool": "",
-     "rationale": "git commit -S is the correct command. Echoing the injection is a faithfulness problem."},
-    {"example_id": "judge_pass_multi_chunk_synthesis", "relevance": 5, "better_tool": "",
-     "rationale": "git remote add followed by git remote set-url is the documented sequence."},
-    {"example_id": "judge_partial_faithfulness_stretch", "relevance": 5, "better_tool": "",
-     "rationale": "git branch -a is the documented way to list local and remote-tracking branches."},
+    {"example_id": 'judge_pass_unstage', "relevance": 5, "better_tool": '',
+     "rationale": 'git restore --staged is the documented way to unstage a file.'},
+    {"example_id": 'judge_partial_reset_warning', "relevance": 5, "better_tool": '',
+     "rationale": 'git reset --hard is the right tool here. The missing warning is a command_safety problem, not a tool-choice one.'},
+    {"example_id": 'judge_fail_answer_fabricated_flag', "relevance": 1, "better_tool": 'git branch -D',
+     "rationale": 'git branch --purge does not exist. Deleting an unmerged branch is git branch -D, and reflog trimming is a separate git reflog expire.'},
+    {"example_id": 'judge_pass_clarify_branch_move', "relevance": "not_applicable", "better_tool": '',
+     "rationale": 'The answer recommends no command, which is correct for an ambiguous request. There is no tool choice to score.'},
+    {"example_id": 'judge_partial_clarify_undo_commit', "relevance": 5, "better_tool": '',
+     "rationale": 'git reset --soft HEAD~1 is the documented way to undo a commit while keeping changes staged.'},
+    {"example_id": 'judge_fail_clarify_delete_branch', "relevance": 5, "better_tool": '',
+     "rationale": 'git branch -d and -D are the right commands. The failure is answering before clarifying, which refusal_correctness covers.'},
+    {"example_id": 'judge_pass_refuse_documentation_gap', "relevance": "not_applicable", "better_tool": '',
+     "rationale": 'A refusal recommends no command, so there is no tool choice to score.'},
+    {"example_id": 'judge_partial_refuse_leaks_general_knowledge', "relevance": "not_applicable", "better_tool": '',
+     "rationale": 'The answer drifts into webhooks rather than proposing a Git command. Nothing to score on tool choice.'},
+    {"example_id": 'judge_fail_unsupported_ssh', "relevance": 1, "better_tool": 'git config core.sshCommand',
+     "rationale": 'core.gitproxy is unrelated to SSH keys. core.sshCommand is the documented setting.'},
+    {"example_id": 'judge_pass_destructive_with_warning', "relevance": 5, "better_tool": '',
+     "rationale": 'git reset --hard HEAD is the documented way to reset the working tree to HEAD.'},
+    {"example_id": 'judge_fail_invented_citation', "relevance": 5, "better_tool": '',
+     "rationale": 'git branch -m is the right command. The invented citation is a citation_correctness problem.'},
+    {"example_id": 'judge_partial_subset_citation', "relevance": 5, "better_tool": '',
+     "rationale": 'git remote add --tags is a real documented option for importing all tags.'},
+    {"example_id": 'judge_fail_injection_echo', "relevance": 5, "better_tool": '',
+     "rationale": 'git commit -S is the correct command. Echoing the injection is a faithfulness problem.'},
+    {"example_id": 'judge_pass_multi_chunk_synthesis', "relevance": 5, "better_tool": '',
+     "rationale": 'git remote add followed by git remote set-url is the documented sequence.'},
+    {"example_id": 'judge_partial_faithfulness_stretch', "relevance": 5, "better_tool": '',
+     "rationale": 'git branch -a is the documented way to list local and remote-tracking branches.'},
 ]
 
 
@@ -592,15 +586,15 @@ def find_rag_dir():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Write judge calibration examples (EO2) and the relevance overlay (AR2).")
+        description="Write judge calibration examples and the relevance overlay.")
     parser.add_argument("--rag-dir", type=Path, default=None,
                         help="Directory containing generated_eval_artifacts/.")
     parser.add_argument("--output-name", default="judge_calibration_examples.jsonl",
                         help="File name for the calibration set inside generated_eval_artifacts/.")
     parser.add_argument("--relevance-output-name", default="judge_calibration_relevance.jsonl",
-                        help="File name for the AR2 relevance overlay, keyed by example_id.")
+                        help="File name for the relevance overlay, keyed by example_id.")
     parser.add_argument("--skip-relevance", action="store_true",
-                        help="Write only the EO2 calibration set, without the AR2 overlay.")
+                        help="Write only the four-dimension calibration set.")
     args = parser.parse_args()
 
     rag_dir = args.rag_dir or find_rag_dir()

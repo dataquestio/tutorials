@@ -325,15 +325,11 @@ UNSAFE_COMMAND_VARIANTS = [
 ]
 
 
-# Self-RAG retry cases: queries whose answer key the first retrieval pass misses.
-# What the lesson measures is whether the loop notices and recovers.
+# Self-RAG retry cases: queries whose answer key the first retrieval pass misses,
+# so a self-correcting loop has something to notice and recover from.
 #
-# `expected_behavior` uses the documented taxonomy value `retrieve_again`. The
-# four allowed values are `answer`, `clarify`, `refuse`, and `retrieve_again`;
-# nothing else is checked by any consumer.
-#
-# Per-case behaviour is recorded in solution_notes.txt, including which cases
-# demonstrate a working retry and which answer correctly without their key.
+# `expected_behavior` is `retrieve_again`. The four allowed values are `answer`,
+# `clarify`, `refuse`, and `retrieve_again`; nothing else is checked anywhere.
 SELF_RAG_EXPECTED_BEHAVIOR = "retrieve_again"
 
 SELF_RAG_RETRY_VARIANTS = [

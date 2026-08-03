@@ -1,13 +1,14 @@
-"""Advanced RAG 3 - Production monitoring and reliability.
+"""Production monitoring and reliability.
 
-Extends the EO3 monitoring helpers with production-scale concepts:
+Adds production-scale concepts on top of the monitoring helpers you already
+have:
 
-- ``PRODUCTION_THRESHOLDS`` - tighter SLOs than the EO3 defaults
+- ``PRODUCTION_THRESHOLDS`` - tighter SLOs than ``DEFAULT_THRESHOLDS``
 - ``compare_models`` - A/B-style report across multiple named run sets
 - ``time_series_drift`` - per-snapshot drift detection for a sequence of
   baselines (e.g. nightly runs)
-- ``regressions_by_slice`` - per-case-type regression breakdown so the
-  lesson can show "which slice broke" rather than only an overall delta
+- ``regressions_by_slice`` - per-case-type regression breakdown, so you can
+  see which slice broke rather than only an overall delta
 
 ``check_thresholds`` is also rewritten here, in two ways:
 
@@ -16,10 +17,10 @@ Extends the EO3 monitoring helpers with production-scale concepts:
 - a configured threshold whose metric is absent now raises
   ``<metric>_not_measured`` instead of being skipped silently
 
-Every other EO3 helper (``summarize_runs``, ``compare_summaries``,
+Every other helper (``summarize_runs``, ``compare_summaries``,
 ``regression_signals``, ``slice_by_tag``, ``dashboard``,
-``make_degraded_copy``) is preserved unchanged, so AR4's production harness
-can call them directly.
+``make_degraded_copy``) is unchanged, so anything already calling them keeps
+working.
 """
 
 import argparse
@@ -192,7 +193,7 @@ def dashboard(runs):
 def make_degraded_copy(runs):
     """Synthesise a degraded current run from the baseline, deterministically.
 
-    Useful for the lesson screens that demonstrate regression alerts
+    Deterministic so that regression alerts can be demonstrated repeatably,
     without depending on live API calls."""
     degraded = []
     for i, run in enumerate(runs):
@@ -204,9 +205,8 @@ def make_degraded_copy(runs):
             copy.setdefault("metrics", {})["answerability_correct"] = False
         # Only touch rows that have a score: a row that legitimately has none,
         # such as a correct refusal with nothing to cite, should stay that way.
-        # EO3's DEFAULT_THRESHOLDS does not check faithfulness, so this shows up
-        # here as a summary number that moved without an alert. AR3 adds the
-        # threshold that turns it into one.
+        # DEFAULT_THRESHOLDS does not check faithfulness, so this degradation
+        # shows up as a summary number that moved without raising an alert.
         if i % 2 == 0 and copy.get("metrics", {}).get("faithfulness_score") is not None:
             copy["metrics"]["faithfulness_score"] = 2
         if copy.get("latency_ms") is not None:
@@ -253,9 +253,9 @@ def compare_models(named_runs):
 def time_series_drift(snapshots):
     """Compute per-step drift over an ordered list of (label, runs) snapshots.
 
-    Useful for the AR3 lesson screens that show a metric degrade across
-    nightly runs. Returns a list of step dicts with the prior label, this
-    label, and the metric deltas between them."""
+    Use this to show a metric degrading across a sequence of nightly runs.
+    Returns a list of step dicts with the prior label, this label, and the
+    metric deltas between them."""
     summaries = [(label, summarize_runs(runs)) for label, runs in snapshots]
     steps = []
     for i in range(1, len(summaries)):
