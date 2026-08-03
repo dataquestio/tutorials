@@ -1,14 +1,14 @@
-"""Evaluating LLM Outputs 3 - Production monitoring helpers.
+"""Production monitoring helpers.
 
-Consumes Run Log entries in the 15-field shape emitted by EO3's
-``gitquest.build_run_log``. Demonstrates:
+Consumes Run Log entries in the shape emitted by
+`gitquest.build_run_log`. Demonstrates:
 
 - aggregate metric summaries over a batch run (answerability accuracy,
   citation precision/recall, average faithfulness, p95 latency, average
   and total cost)
-- threshold-based alerting against ``DEFAULT_THRESHOLDS``
+- threshold-based alerting against `DEFAULT_THRESHOLDS`
 - baseline-versus-current comparison with per-metric deltas
-- a deterministic ``make_degraded_copy`` helper that synthesises a
+- a deterministic `make_degraded_copy` helper that synthesises a
   degraded current run from the baseline so the lesson can demonstrate
   regressions without depending on live API calls
 
@@ -157,7 +157,7 @@ def dashboard(runs):
 def make_degraded_copy(runs):
     """Synthesise a degraded current run from the baseline, deterministically.
 
-    Useful for the lesson screens that demonstrate regression alerts
+    Deterministic so that regression alerts can be demonstrated repeatably,
     without depending on live API calls."""
     degraded = []
     for i, run in enumerate(runs):
@@ -167,6 +167,12 @@ def make_degraded_copy(runs):
             copy["citations"] = []
         if i % 5 == 0:
             copy.setdefault("metrics", {})["answerability_correct"] = False
+        # Only touch rows that have a score: a row that legitimately has none,
+        # such as a correct refusal with nothing to cite, should stay that way.
+        # DEFAULT_THRESHOLDS does not check faithfulness, so this degradation
+        # shows up as a summary number that moved without raising an alert.
+        if i % 2 == 0 and copy.get("metrics", {}).get("faithfulness_score") is not None:
+            copy["metrics"]["faithfulness_score"] = 2
         if copy.get("latency_ms") is not None:
             copy["latency_ms"] = int(copy["latency_ms"] * 1.8)
         degraded.append(copy)

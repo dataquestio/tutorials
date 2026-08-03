@@ -1,7 +1,7 @@
 """Foundation evaluation metrics for the GitQuest pipeline.
 
 Computes the retrieval, citation, lexical, and answerability metrics
-introduced in Evaluating LLM Outputs 1. Reads runs and the curated eval
+introduced in Foundation Metrics and Evaluation Frameworks. Reads runs and the curated eval
 set from JSONL files and prints aggregate scores.
 
 Usage:
@@ -84,8 +84,8 @@ def lexical_overlap(reference, hypothesis):
 
 def bleu_1(reference, hypothesis):
     """Unigram BLEU baseline. Real BLEU uses higher-order n-grams; one-gram
-    precision is enough for the lesson to motivate why lexical metrics are
-    a limited grading target."""
+    precision is enough to show why lexical overlap is a limited grading
+    target."""
     p, _, _ = lexical_overlap(reference, hypothesis)
     return p
 

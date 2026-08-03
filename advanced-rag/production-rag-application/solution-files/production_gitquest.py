@@ -1,4 +1,4 @@
-"""Advanced RAG 4 - Production RAG Application (guided project).
+"""Production RAG Application (guided project).
 
 Everything *inside* the pipeline (security overlay, self-RAG loop, judge,
 evaluation metrics, run-log schema, monitoring helpers) was introduced in
@@ -6,7 +6,7 @@ earlier lessons. AR4 introduces the one missing piece a real production
 team needs: a **shape** for wiring them together that's open to extension
 without rewriting the harness every time a new failure mode shows up.
 
-Look at how the procedural draft (and ``advanced_security.py``) handled
+Look at how the procedural draft (and `advanced_security.py`) handled
 case dispatch:
 
     if case["case_type"] == "self_rag_retry":
@@ -19,9 +19,9 @@ types grows - and a real production deployment will grow it - every new
 failure mode would force an edit to the orchestrator, which is exactly
 the file you want to touch least often.
 
-``ProductionHarness`` replaces those branches with a small **case-handler
+`ProductionHarness` replaces those branches with a small **case-handler
 registry**. The harness owns config, accumulated runs, scoring, and
-reporting. Handlers are narrow: ``(case, config) -> (result, judgement)``.
+reporting. Handlers are narrow: `(case, config) -> (result, judgement)`.
 Adding a new case type becomes a one-liner from outside the harness:
 
     harness.register_case_handler("my_new_case", my_handler)
@@ -29,12 +29,12 @@ Adding a new case type becomes a one-liner from outside the harness:
 This file also bakes in two production-flavoured additions that are
 mechanically small but conceptually load-bearing:
 
-- ``cost_per_passing_answer_usd`` - a derived metric on top of the cost
-  tracking already in ``gitquest.py`` / ``monitoring.py``. ``avg_cost_usd``
+- `cost_per_passing_answer_usd` - a derived metric on top of the cost
+  tracking already in `gitquest.py` / `monitoring.py`. `avg_cost_usd`
   tells you what you spent; this tells you what you spent *per correct
   answer*, which is the number a budget owner actually asks for.
-- ``run_canary`` - per-item paired runs across two configs. The existing
-  ``regressions_by_slice`` compares aggregates; canary mode pairs the same
+- `run_canary` - per-item paired runs across two configs. The existing
+  `regressions_by_slice` compares aggregates; canary mode pairs the same
   input through control and variant configs so behavioural drift surfaces
   before you promote a config change.
 
@@ -91,6 +91,11 @@ def default_rag_dir():
 
 
 def evidence_payload(chunk_ids):
+    """Hydrate corpus chunk ids into judge-shaped evidence dicts.
+
+    Use this for curated evidence, for example when you want to inspect what a
+    case's answer key actually contains. Do NOT pass the result to a judge as the
+    `evidence` argument: see the note above `secured_pipeline_handler`."""
     payload = []
     for chunk_id in chunk_ids:
         if chunk_id in corpus:
@@ -105,11 +110,11 @@ def evidence_payload(chunk_ids):
 # ---------------------------------------------------------------------------
 # Default case handlers.
 #
-# Handler contract: ``(case, config) -> (result, judgement)``.
-#   - ``case`` is a normalised dict with ``user_query``, ``expected_behavior``,
-#     ``trusted_evidence`` (list of {"chunk_id": ...}), and optional
-#     ``tags`` / ``injected_docs``.
-#   - ``config`` is the harness config dict; handlers read whichever keys
+# Handler contract: `(case, config) -> (result, judgement)`.
+#   - `case` is a normalised dict with `user_query`, `expected_behavior`,
+#     `trusted_evidence` (list of {"chunk_id": ...}), and optional
+#     `tags` / `injected_docs`.
+#   - `config` is the harness config dict; handlers read whichever keys
 #     they care about and ignore the rest.
 # ---------------------------------------------------------------------------
 
@@ -118,12 +123,19 @@ def self_rag_retry_handler(case, config):
     history = run_self_rag_loop(
         query=case["user_query"],
         required_ids=trusted_ids,
-        tags=case.get("tags") or [],
         expected_behavior=case["expected_behavior"],
     )
     return history[-1]["result"], history[-1]["judgement"]
 
 
+# A judge's `evidence` argument must be what the model actually saw, never the
+# case's answer key. Faithfulness is defined as "are the cited ids a subset of the
+# supplied evidence", so handing it the answer key instead asks a different
+# question: "did the pipeline cite the chunks we expected?" That is citation
+# precision, which score_item already measures against `required_citations`.
+#
+# Retrieval recall and citation metrics DO belong against the answer key. Only
+# faithfulness belongs against the retrieved context. Keep the two separate.
 def secured_pipeline_handler(case, config):
     result = ask_gitquest_secured(
         query=case["user_query"],
@@ -132,11 +144,10 @@ def secured_pipeline_handler(case, config):
         token_budget=config.get("token_budget", 6000),
         model=config.get("model", "gpt-4o-mini"),
     )
-    trusted_ids = [ev["chunk_id"] for ev in case.get("trusted_evidence", [])]
     judgement = heuristic_judge(
         query=case["user_query"],
         answer=result["answer"],
-        evidence=evidence_payload(trusted_ids),
+        evidence=result["retrieved_chunks"],
         cited_ids=[c["chunk_id"] for c in result["citations"]],
         expected_behavior=case["expected_behavior"],
     )
@@ -162,7 +173,7 @@ class ProductionHarness:
         self.register_case_handler("default", secured_pipeline_handler)
 
     def register_case_handler(self, case_type, handler):
-        """Bind ``case_type`` to ``handler``. Overwrites any existing binding."""
+        """Bind `case_type` to `handler`. Overwrites any existing binding."""
         self._case_handlers[case_type] = handler
 
     def _resolve_handler(self, case_type):
@@ -178,11 +189,16 @@ class ProductionHarness:
             "tags": item.get("tags") or [],
         }
 
+    # Curated eval items carry expected_behavior values mapped from answerability:
+    # "answer", "clarify", or "refuse". "retrieve_again" is part of the documented
+    # taxonomy but is never assigned to a curated item, so eval items always take
+    # the default handler. Register a handler under this name to override.
+    EVAL_ITEM_CASE_TYPE = "default"
+
     def run_eval_item(self, item):
         """Run a curated eval item through the registered handler and score it."""
-        case_type = "self_rag_retry" if item.get("expected_behavior") == "retrieve_again" else "default"
         case = self._normalise_eval_item(item)
-        result, judgement = self._resolve_handler(case_type)(case, self.config)
+        result, judgement = self._resolve_handler(self.EVAL_ITEM_CASE_TYPE)(case, self.config)
 
         metrics = score_item(item, result)
         metrics["faithfulness_score"] = faithfulness_score(judgement)
@@ -191,7 +207,7 @@ class ProductionHarness:
         return log
 
     def run_advanced_case(self, case):
-        """Dispatch an advanced case by ``case_type`` and score it."""
+        """Dispatch an advanced case by `case_type` and score it."""
         case_type = case["case_type"]
         result, judgement = self._resolve_handler(case_type)(case, self.config)
 
@@ -217,10 +233,10 @@ class ProductionHarness:
             self.run_advanced_case(case)
 
     def run_canary(self, case, variant_config):
-        """Run ``case`` through both ``self.config`` (control) and ``variant_config``
+        """Run `case` through both `self.config` (control) and `variant_config`
         (variant) and record a paired diff.
 
-        Differs from ``regressions_by_slice``: that compares aggregates across
+        Differs from `regressions_by_slice`: that compares aggregates across
         two run sets; this pairs the *same input* across two configs so that
         per-item behavioural drift (different citation set, big cost jump,
         faithfulness regression on one specific question) becomes visible
@@ -348,25 +364,25 @@ def main():
 # the harness internals - that's the point of the design.
 #
 # A) Custom slicers.
-#    ``monitoring.slice_by_tag`` only buckets by ``case_type``. Add a second
-#    registry to the harness - ``register_slicer(name, fn)`` where ``fn``
+#    `monitoring.slice_by_tag` only buckets by `case_type`. Add a second
+#    registry to the harness - `register_slicer(name, fn)` where `fn`
 #    takes a run log and returns a bucket name (e.g. query-length bucket,
-#    number of citations, tag membership). Have ``report()`` expose
-#    ``dashboards_by_slice`` with one dashboard per registered slicer.
+#    number of citations, tag membership). Have `report()` expose
+#    `dashboards_by_slice` with one dashboard per registered slicer.
 #    Use it to find regressions that the case_type view hides.
 #
-# B) New case type: ``context_poisoning``.
-#    Existing security cases attack the *input* via ``injected_docs``. Write
-#    a handler that mutates ``gitquest.corpus`` directly (insert a hostile
+# B) New case type: `context_poisoning`.
+#    Existing security cases attack the *input* via `injected_docs`. Write
+#    a handler that mutates `gitquest.corpus` directly (insert a hostile
 #    chunk before retrieval, restore the original state after) and verify
 #    the secured pipeline still cites trusted IDs. Register it from outside:
-#    ``harness.register_case_handler("context_poisoning", your_handler)`` -
+#    `harness.register_case_handler("context_poisoning", your_handler)` -
 #    no edits to this file needed. Add cases of the new type to
-#    ``advanced_rag_cases.jsonl`` to exercise it.
+#    `advanced_rag_cases.jsonl` to exercise it.
 #
 # C) Failure replay.
-#    Add ``replay_from_log(path)`` to the harness: load a prior run-log
-#    JSONL, filter to items that breached ``self.thresholds``, re-run those
+#    Add `replay_from_log(path)` to the harness: load a prior run-log
+#    JSONL, filter to items that breached `self.thresholds`, re-run those
 #    through the current pipeline, and emit a per-item before/after diff.
 #    Mirrors the real incident response loop. The interesting design
 #    question this forces: how stable does the run-log schema need to be

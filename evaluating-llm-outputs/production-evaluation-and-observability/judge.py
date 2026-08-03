@@ -1,11 +1,11 @@
-"""Evidence-aware LLM-as-judge helper introduced in Evaluating LLM Outputs 2.
+"""Evidence-aware LLM-as-judge helper introduced in LLM-as-Judge and Automated Evaluation.
 
 Exposes two callables:
 
-- ``llm_judge(query, answer, evidence, ...)`` calls an OpenAI-compatible
-  chat model and parses its JSON response. Raises ``JudgeUnavailable`` when
+- `llm_judge(query, answer, evidence, ...)` calls an OpenAI-compatible
+  chat model and parses its JSON response. Raises `JudgeUnavailable` when
   no client is configured so callers can decide whether to skip or fall back.
-- ``heuristic_judge(query, answer, evidence, ...)`` deterministic fallback
+- `heuristic_judge(query, answer, evidence, ...)` deterministic fallback
   that scores faithfulness, citation correctness, command safety, and
   refusal correctness using transparent rules. Useful for offline lessons
   and CI tests that need stable numbers.
@@ -22,8 +22,8 @@ without changing downstream code::
     }
 
 If a dimension is added in one implementation, add it to the other, to
-``JUDGE_SYSTEM_PROMPT``, and to the calibration examples emitted by
-``build_judge_calibration.py``.
+`JUDGE_SYSTEM_PROMPT`, and to the calibration examples emitted by
+`build_judge_calibration.py`.
 """
 
 import json

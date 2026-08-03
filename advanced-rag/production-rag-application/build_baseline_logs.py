@@ -1,12 +1,12 @@
-"""Evaluating LLM Outputs 3 - Baseline run-log builder.
+"""Baseline run-log builder.
 
-Generates a synthetic ``baseline_run_logs.jsonl`` file in the 15-field
-Run Log shape. The file is consumed by ``monitoring.py`` to teach
+Generates a synthetic `baseline_run_logs.jsonl` file in the 15-field
+Run Log shape. The file is consumed by `monitoring.py` to teach
 baseline-versus-current comparison, threshold alerts, and drift
 detection in EO3, and by the Advanced RAG monitoring lesson later.
 
 Each generated row is built directly from the EO1 curated eval set so
-the ``query_id``s match the ones EO/AR use everywhere else.
+the `query_id`s match the ones EO/AR use everywhere else.
 
 Usage:
     python build_baseline_logs.py --rag-dir <path/to/rag>
@@ -82,7 +82,12 @@ def build_log(index, item):
             "citation_precision": 1.0 if citations else None,
             "citation_recall": 1.0 if citations else None,
             "answerability_correct": True,
-            "faithfulness_score": None,
+            # Deterministic, like every other synthetic field here. Rows that cite
+            # nothing get None rather than a low score: a correct refusal has no
+            # claims to be unfaithful about, and summarize_runs excludes None from
+            # the average. Cited rows alternate 4 and 5, so the baseline averages
+            # comfortably above a 4.0 faithfulness threshold.
+            "faithfulness_score": (4 if index % 3 == 0 else 5) if citations else None,
         },
         "latency_ms": 900 + (index * 37),
         "input_tokens": 1500 + (len(evidence) * 260),

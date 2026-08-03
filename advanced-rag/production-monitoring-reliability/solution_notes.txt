@@ -1,0 +1,71 @@
+AR3 AUTHORING NOTES
+Delete before shipping the lesson.
+
+
+WHAT TO DO
+
+One file changes: monitoring.py. gitquest.py is unchanged from AR2.
+
+Teach five things:
+
+  PRODUCTION_THRESHOLDS   tighter SLOs, and the only set that configures
+                          min_avg_faithfulness_score
+  compare_models          A/B report across named run sets
+  time_series_drift       drift across an ordered sequence of snapshots
+  regressions_by_slice    per-case-type breakdown, so "which slice broke"
+  check_thresholds        rewritten, see below
+
+The strongest screen is the threshold contrast. Run the same degraded copy against
+both threshold sets and show that the tighter set catches something the default set
+misses. It runs offline against the shipped baseline logs with no API calls.
+
+The second-strongest is the absent-metric alert. A monitoring report that comes back
+clean because a metric was never measured is worse than one reporting a low number.
+check_thresholds now raises `<metric>_not_measured` rather than skipping, and that is
+worth a screen on its own.
+
+
+ASSUMPTIONS
+
+- check_thresholds had to be rewritten, not extended. EO3's version hardcodes five
+  checks and would ignore min_avg_faithfulness_score entirely.
+- Every other EO3 helper is byte-identical, including make_degraded_copy. Keep it
+  that way: if AR3's copy diverges in a function AR3 does not claim to change, the
+  diff stops being readable.
+- Baseline faithfulness averages 4.65 and the degraded copy 3.45, both by
+  construction in build_baseline_logs.py and make_degraded_copy. The 4.0 threshold
+  sits between them deliberately. If you change either, keep that ordering.
+- compare_models and time_series_drift have no call sites anywhere in the repo. They
+  work when invoked directly, but the screens that use them will be their first real
+  exercise.
+
+
+EXPECTED RESULT
+
+Same degraded run, two threshold sets:
+
+  DEFAULT_THRESHOLDS      3 alerts    faithfulness not configured
+  PRODUCTION_THRESHOLDS   4 alerts    adds avg_faithfulness_below_threshold
+
+Baseline is clean under both.
+
+avg_faithfulness_score 4.65 -> 3.45, visible in EO3 without an alert, alerting here.
+
+A summary with an absent metric raises `avg_faithfulness_score_not_measured`.
+
+
+SIGNATURES
+
+  dashboard(runs)                run logs, not a summary
+  time_series_drift(snapshots)   a list of (label, runs) tuples
+  compare_models(named_runs)     {model_name: [run, ...]}
+
+
+BLOCKED ON DATA, NOT CODE
+
+1. compare_models wants two run-log variants from genuinely different generator
+   configs. make_degraded_copy is a synthetic stand-in, not a model comparison.
+2. time_series_drift wants three to five timestamped snapshots showing a metric
+   degrade. build_baseline_logs.py emits one point-in-time set of 24 rows.
+
+Both are EO3 shipping blockers. Neither blocks authoring AR3's other screens.
