@@ -71,6 +71,21 @@ with generation, plus two judge requests per judgement if a live judge is wired 
 Budget before demonstrating a full batch.
 
 
+SHIPPED ARTIFACT: production_gitquest_run_logs_sample.jsonl
+
+40 rows in rag/generated_eval_artifacts/. It is an example of structure and shape
+only: 20 rows keyed to curated eval items, 20 keyed to advanced_rag_cases with
+case_type set. It is the only artifact showing a run log with a populated judgement
+block, which is what build_run_log emits here.
+
+It will be regenerated during this lesson by the final solution. Learners should fix:
+
+- latency_ms, which is 0 on all 40 rows
+- pipeline_version, currently "gitquest_advanced_v1", which matches no pipeline in
+  the repo
+- retrieval_config, which omits "model"
+
+
 FORWARD OPTION, NOT A DEFAULT
 
 With AR2's relevance-driven loop in place, AR4 could route every curated eval item

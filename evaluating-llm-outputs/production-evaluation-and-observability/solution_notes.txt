@@ -7,8 +7,68 @@ WHAT TO DO
 Teach the 15-field run log, threshold alerts, baseline-versus-current comparison,
 and drift. Two new files: monitoring.py and build_baseline_logs.py.
 
-Use make_degraded_copy for every regression screen. It is deterministic, so the
-numbers on the page match what the learner sees, and it needs no API calls.
+Structure the lesson in three beats. The point of the sequence is that a green
+dashboard is not evidence of a healthy pipeline.
+
+BEAT 1  The ideal setup
+
+  baseline_run_logs.jsonl plus monitoring.py. No keys, no cost, fully
+  deterministic. Every metric is 1.0, every threshold passes, check_thresholds
+  returns an empty list.
+
+  Use make_degraded_copy for the regression screens here. It is deterministic, so
+  the numbers on the page match what the learner sees, and it needs no API calls.
+
+  Do not present this file as real output. It is a fixture and its `notes` field
+  says so. build_baseline_logs sets `answer` to the item's reference_answer and
+  `citations` to its required_citations, which is why the metrics are perfect. The
+  baseline is scoring the answer key against itself.
+
+BEAT 2  Bring in live keys
+
+  live_run_logs.jsonl in generated_eval_artifacts is a recorded run of the same 24
+  items through the same pipeline, with every metric computed by evaluate.score_item
+  and a judgement from llm_judge.
+
+  What moves:
+
+    metric                  beat 1        beat 2
+    answerability_accuracy     1.0         0.583
+    citation_precision         1.0         0.046
+    citation_recall            1.0         0.095
+    avg_faithfulness_score    4.65          4.83
+    p95_latency_ms            1751         15778
+
+  Beat 1 raises no alerts. Beat 2 raises four: answerability, citation precision,
+  citation recall, p95 latency.
+
+  Three things to draw out, in this order:
+
+  1. Faithfulness went UP, not down. This is not "live output is worse". The
+     answers are well grounded; what fails is answerability, citations, and
+     latency. Resist framing beat 2 as a uniform collapse.
+
+  2. citation_precision near zero is not a retrieval failure. The pipeline cites
+     correct evidence and scores zero because the metric compares exact chunk ids
+     against one blessed chunk, and the full corpus holds several chunks that are
+     equally valid. Asked about `git branch`, it cited git-branch(1) part 1 where
+     the key wanted part 3. Asked about `git add`, the key requires a git-reset(1)
+     chunk. Beat 3 is where the metric gets fixed, not the pipeline.
+
+  3. The numbers move between runs. Two runs of the identical pipeline over the
+     identical items scored answerability 0.708 and 0.583. Generation temperature
+     is not pinned in ask_gitquest. Make this the point rather than hiding it: a
+     threshold tuned against one run is tuned against noise, which is why you pin a
+     recorded baseline and version it with pipeline_version.
+
+  Because of 3, quote live_run_logs.jsonl as the reference for any number printed
+  on a screen. A learner's own rerun will differ, and that difference is the
+  lesson.
+
+BEAT 3  What actually works
+
+  Compute metrics rather than store them, pin a recorded baseline, version it, and
+  recalibrate thresholds against that baseline instead of against a fixture.
 
 Leave faithfulness thresholds alone. DEFAULT_THRESHOLDS deliberately configures
 none, so a faithfulness drop shows up here as a summary number that moved without

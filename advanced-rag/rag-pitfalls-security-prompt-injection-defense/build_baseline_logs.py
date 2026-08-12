@@ -56,8 +56,8 @@ def build_log(index, item):
         {
             "chunk_id": chunk_id,
             "distance": round(0.34 + (i * 0.037), 4),
-            "source_type": "unknown",
-            "title": "filled by live pipeline",
+            "source_type": "not_recorded",
+            "title": "not_recorded",
         }
         for i, chunk_id in enumerate(evidence[:5])
     ]
@@ -93,7 +93,7 @@ def build_log(index, item):
         "input_tokens": 1500 + (len(evidence) * 260),
         "output_tokens": max(80, len((item.get("reference_answer") or "").split())),
         "estimated_cost_usd": round(0.0008 + (index * 0.00003), 6),
-        "notes": "Synthetic baseline run log for observability lessons; replace with live run output when available.",
+        "notes": "Synthetic baseline: deterministic by construction, no API calls. Metrics are ideal by design so the monitoring lesson has a clean reference to compare a live run against.",
     }
 
 
