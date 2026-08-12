@@ -139,10 +139,22 @@ def average(values):
     return sum(cleaned) / len(cleaned)
 
 
+def chunk_ids(value):
+    """Pull chunk ids out of either run shape.
+
+    An `ask_gitquest` result carries chunks as dicts; a run log built by
+    `build_run_log` has already flattened them to bare id strings. Accept both so
+    the same scorer works on a live result and on a stored log."""
+    ids = []
+    for entry in value or []:
+        ids.append(entry["chunk_id"] if isinstance(entry, dict) else entry)
+    return ids
+
+
 def score_item(eval_item, run):
     """Compute the metric block for one (eval_item, run) pair."""
-    final_ids = [c["chunk_id"] for c in run.get("retrieved_chunks", [])]
-    cited_ids = [c["chunk_id"] for c in run.get("citations", [])]
+    final_ids = chunk_ids(run.get("retrieved_chunks") or run.get("final_chunks"))
+    cited_ids = chunk_ids(run.get("citations"))
     reference = eval_item.get("reference_answer") or ""
     answer = run.get("answer") or ""
     return {
