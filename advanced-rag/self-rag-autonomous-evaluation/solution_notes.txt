@@ -70,9 +70,9 @@ explicit data-loss warning, which is AR1's warning rule working as designed.
 
 EXPECTED RESULT
 
-Dry run: 0 of 7 retries. cherry_pick and worktree stay wrong.
+Dry run: 0 of 6 retries. cherry_pick and worktree stay wrong.
 
-Live run: 2 of 7 retries, on cherry_pick and worktree only. Both end correct, both
+Live run: 2 of 6 retries, on cherry_pick and worktree only. Both end correct, both
 end at relevance 5. The other five stop at one attempt.
 
 Relevance separation, deterministic at temperature 0:
