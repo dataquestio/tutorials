@@ -113,12 +113,113 @@ Easy to get wrong when writing screens or test code:
   compare_models(named_runs)     {model_name: [run, ...]}
 
 
-BLOCKED BEFORE SHIPPING
+MODEL & CONFIG VARIANTS (for AR3's compare_models)
 
-1. Two run-log variants from genuinely different generator configs, for the
-   model-comparison screens. make_degraded_copy is a synthetic stand-in and should
-   not be presented as a model comparison.
-2. Three to five timestamped snapshots showing a metric degrade, for the drift
-   screens. This builder emits one point-in-time set.
+live_run_logs.jsonl is the reference config: gpt-4o-mini, candidate_k=10,
+rerank_top_n=5, token_budget=6000. Three more files live alongside it in
+generated_eval_artifacts, same 24 items, same judge (llm_judge, gpt-4o-mini),
+one knob changed per file from that reference, everything else identical:
 
-Neither blocks authoring the other screens.
+  live_run_logs_model_variant_gpt5nano.jsonl
+    model: gpt-4o-mini -> gpt-5-nano. No code change; `model` is already an
+    ask_gitquest parameter.
+
+  live_run_logs_rerank_top2_variant.jsonl
+    rerank_top_n: 5 -> 2. ask_gitquest hardcodes top_n=5 in its call to
+    rerank(); generating this file needed a throwaway driver that copies
+    ask_gitquest's steps and passes rerank_top_n through instead. gitquest.py
+    itself was never edited.
+
+  live_run_logs_token_budget2000_variant.jsonl
+    token_budget: 6000 -> 2000. No code change; already an ask_gitquest
+    parameter. Tried 1200 and 3000 first. 1200 collapsed every item to a
+    single chunk (indistinguishable from the rerank cut below); 3000 barely
+    bound at all (23/24 items still kept all 5 chunks). 2000 lands in
+    between. Chunk counts spread 3/4/5 across items instead of hitting a
+    floor or doing nothing, so it was kept and the other two were discarded.
+
+  metric                    reference   gpt5nano   rerank_top_n=2   budget=2000
+  retrieval_recall_at_5        0.143        --          0.000           0.048
+  citation_precision            0.046      0.029        0.000           0.000
+  citation_recall                0.095      0.095        0.000           0.000
+  answerability_accuracy         0.583      0.833        0.500           0.708
+  avg_faithfulness_score         4.83       4.92         4.92            4.75
+  p95_latency_ms                15778      50759        15018           13110
+  total cost (24 items)        $0.01295   $0.00837     $0.00701        $0.01032
+
+  (retrieval_recall_at_5 is blank for gpt5nano. Only the generation model
+  changed, so retrieval/rerank are untouched and the retrieved chunks are
+  identical to the reference run.)
+
+  What each tells:
+
+  1. gpt5nano is a cost-vs-latency story, not a quality story. Cost drops
+     ~35%, but p95 latency more than triples (50759ms vs 15778ms), and it
+     is not one slow outlier dragging the average. Every one of its 24 runs
+     is slower than the reference run's single slowest item. Faithfulness
+     and citations don't move meaningfully. Don't sell this as "the cheaper
+     model answers worse." It doesn't. It's slower, structurally.
+
+  2. rerank_top_n=2 is a full collapse: retrieval_recall_at_5 goes to zero
+     on every item, while faithfulness barely moves (4.83 -> 4.92). Same
+     point as beat 2 point 1, that faithfulness isn't a proxy for pipeline
+     health, but caused by a config change instead of live-run noise, so
+     it's reproducible on demand instead of waiting for a bad rerun.
+
+  3. token_budget=2000 is the partial version of the same failure:
+     retrieval_recall_at_5 drops but doesn't zero out (0.143 -> 0.048),
+     because only some items lose enough chunks to lose the gold evidence
+     (12 items end up at 3 chunks, 9 at 4, 3 keep all 5). Good screen for
+     AR3's regressions_by_slice, since "which items broke" actually varies
+     here, unlike the rerank cut, where everything breaks uniformly.
+
+  Two cautions before quoting these on a screen:
+
+  - citation_precision and citation_recall hit zero in both config variants,
+    same as the reference run's already-near-zero baseline (0.046 / 0.095).
+    This metric is fragile everywhere in this dataset (see beat 2 point 2),
+    so don't lean on the citation numbers to distinguish rerank from budget.
+  - answerability_accuracy for budget=2000 landed at 0.708, the exact
+    noise ceiling from beat 2 point 3 (two identical-config runs scored
+    0.708 and 0.583). The discarded token_budget=3000 run hit 0.708 too,
+    with a config that barely changed anything. Treat 0.708 as noise-band
+    for this metric, not signal, when narrating the budget variant.
+
+  pipeline_version is unchanged ("gitquest_eo3_v1") across the reference and
+  all three variants, since it's the same pipeline code with a different
+  config or model. That's what retrieval_config.model and the file name
+  are for.
+
+
+DRIFT SNAPSHOTS (for AR3's time_series_drift)
+
+drift_snapshots.jsonl in generated_eval_artifacts is four labeled snapshots,
+each one line: {"label": ..., "runs": [...24 run logs...]}. Synthetic and
+deterministic, same as baseline_run_logs.jsonl and make_degraded_copy. No
+API calls, not meant to be presented as real production history. This is a
+small showcase fixture, not a deep addition; don't spend lesson time
+building it out further than this.
+
+Built from baseline_run_logs.jsonl at increasing degradation, so the last
+snapshot is exactly monitoring.make_degraded_copy(baseline), reusing the
+already-shared helper instead of inventing a fourth degradation scheme:
+
+  label         avg_faithfulness_score   what changed
+  2026-07-28          4.65               baseline, untouched
+  2026-08-04          4.55               light: 1 in 6 rows nudged down 1 point
+  2026-08-11          4.35               moderate: 1 in 3 rows nudged down 1
+                                          point, some citation_precision zeroed
+  2026-08-18          3.45               = make_degraded_copy(baseline) exactly
+
+Running this through AR3's time_series_drift confirms the shape: per-step
+regression_signals deltas are -0.10, -0.20, -0.90 on avg_faithfulness_score
+across the three steps, a slow decline that accelerates into the cliff on
+the last step, rather than one flat drop. Latency and citation_precision
+regress alongside it on the later steps, same fields make_degraded_copy
+already touches.
+
+Labels are plain hardcoded date strings (a weekly cadence ending today), not
+computed timestamps. Keeps the file reproducible on a rerun, consistent
+with the "no randomness or timestamps" rule under ASSUMPTIONS.
+
+

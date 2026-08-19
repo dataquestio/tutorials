@@ -63,12 +63,32 @@ ASSUMPTIONS
 
 EXPECTED RESULT
 
-Runs end to end. At --limit 2 that is 4 run logs in roughly 33s, pipeline_version
-gitquest_ar2_v1, avg_faithfulness_score around 4.5, clearing AR3's 4.0 threshold.
+Verified: production_gitquest.py runs end to end. At --limit 2 that is 4 run
+logs, pipeline_version gitquest_ar2_v1.
+
+Decide before authoring the threshold-clearing screen: avg_faithfulness_score
+does not reliably clear AR3's 4.0 threshold at small --limit values. Generation
+temperature is not pinned (same fact as EO3's Beat 2 point 3), so at n=4
+individual item scores of 3 and 5 can average out right at 4.0 instead of
+comfortably above it. Either demo with a larger --limit so the average has
+less variance, or use the noise itself as the teaching point, the way EO3 and
+AR3 already do elsewhere.
+
+Both handlers default to heuristic_judge, not a live judge call (run_self_rag_loop
+falls back to heuristic_judge when no judge is passed, and secured_pipeline_handler
+calls it directly). A live judge can be wired in via run_self_rag_loop's judge
+argument; decide whether this lesson demos that or stays on the heuristic default.
 
 Cost: --limit 8 means 8 eval items plus 8 advanced cases, each a full pipeline run
-with generation, plus two judge requests per judgement if a live judge is wired in.
-Budget before demonstrating a full batch.
+with generation. Budget before demonstrating a full batch.
+
+Budget for a full --limit 38 run (all 38 advanced cases, all 7 case types, plus
+38 curated eval items): roughly 82 generation calls (curated items and all
+advanced cases except self_rag_retry are single-pass; the 6 self_rag_retry
+cases can take up to 2 passes each at DEFAULT_MAX_RETRIES=1). Cost lands
+around $0.03-0.05, wall clock around 12-15 minutes, sequential with no
+parallelism in the harness. Use this for the lesson's own cost/time framing
+rather than re-deriving it per author.
 
 
 SHIPPED ARTIFACT: production_gitquest_run_logs_sample.jsonl
@@ -78,12 +98,44 @@ only: 20 rows keyed to curated eval items, 20 keyed to advanced_rag_cases with
 case_type set. It is the only artifact showing a run log with a populated judgement
 block, which is what build_run_log emits here.
 
-It will be regenerated during this lesson by the final solution. Learners should fix:
+Learners should fix, in their own solution's output, not in this file:
 
 - latency_ms, which is 0 on all 40 rows
 - pipeline_version, currently "gitquest_advanced_v1", which matches no pipeline in
   the repo
 - retrieval_config, which omits "model"
+
+Keep this file as the flawed-shape exercise artifact. It is not meant to be
+replaced.
+
+
+SHIPPED ARTIFACT: production_gitquest_run_logs.jsonl
+
+76 rows in rag/generated_eval_artifacts/: 38 curated eval items plus all 38
+advanced cases across all 7 case types (conflicting_sources 5,
+monitoring_regression 4, prompt_injection_doc 8, prompt_injection_user 5,
+self_rag_retry 6, stale_source 5, unsafe_command 5). pipeline_version
+gitquest_ar2_v1. This is the real live recording, for learners to cross-check
+their own solution's output against once they have completed it, not a
+fixture to critique like the sample above.
+
+Actual run: total_cost_usd 0.0408, wall_clock_seconds 762 (about 12.7
+minutes), matching the budget above. avg_faithfulness_score 4.82 across all
+76 runs, comfortably clearing AR3's 4.0 threshold at this sample size, unlike
+the --limit 2 smoke test that landed exactly on it. cost_per_passing_answer_usd
+0.00146.
+
+report()'s own regressions_by_slice entry compares self.runs against itself
+(regressions_by_slice(self.runs, self.runs)), so every regression list in
+this file's own report is empty by construction. That is a same-batch sanity
+view, not the AR3-lesson usage of comparing two separate runs over time.
+
+Side effect worth knowing: this is the first file in the repo with real
+case_type-tagged live run data across all 7 types. AR3's regressions_by_slice
+section (in EO3's and AR3's solution_notes.txt) documents shipping
+single-bucket because no file had case_type data. Paired with a second AR4
+run at a different config, this file is real case_type data that section
+did not have.
 
 
 FORWARD OPTION, NOT A DEFAULT
@@ -92,3 +144,40 @@ With AR2's relevance-driven loop in place, AR4 could route every curated eval it
 through the self-RAG handler, since the loop no longer needs an answer key to decide
 whether to retry. That doubles the pipeline passes on a batch run, so it is a
 deliberate choice for whoever writes this lesson.
+
+
+STRETCH EXERCISES: RE-RUN EO3/AR3 FUNCTIONS ON THE REAL AR4 DATA
+
+EO3 and AR3's own screens run their monitoring functions against synthetic or
+single-case-type data (make_degraded_copy, drift_snapshots.jsonl, the
+single-bucket regressions_by_slice call). production_gitquest_run_logs.jsonl
+is the first real, case_type-diverse live dataset in the repo, so these
+functions can be re-run against it for genuine results instead of fixtures.
+main()'s CLI only exposes --rag-dir, --limit, --output-log, and --canary; a
+second differently-configured run needs the ProductionHarness Python API
+directly (a second config dict passed to a new harness instance), not a CLI
+flag.
+
+- regressions_by_slice, for real per-slice results. Run production_gitquest.py
+  twice with two different configs (e.g. token_budget or model changed), and
+  pass both run sets to regressions_by_slice. AR3's own notes ship this
+  single-bucket for lack of case_type data; this file has all 7 case types.
+
+- compare_models, at full AR4 scale. EO3's compare_models comparison
+  (gpt-4o-mini vs gpt-5-nano) only covers the 24-item curated set. Running the
+  same two-model comparison through production_gitquest.py's full 76-item
+  batch (curated items plus all 7 advanced case types) tests whether the
+  cost-vs-latency story holds up across security and self-RAG cases too, not
+  just plain Q&A.
+
+- time_series_drift, with genuine snapshots instead of synthetic ones. Run
+  production_gitquest.py 3-5 times (same config, different labels) and feed
+  the results in as real timestamped snapshots. Generation temperature is not
+  pinned, so the natural run-to-run variance becomes real drift data rather
+  than the deterministic degradation used in EO3's drift_snapshots.jsonl.
+
+- run_canary itself has not been exercised in this session's verification runs
+  (neither run used --canary). Running with --canary is the cheapest of these
+  four to try, since it reuses the existing batch rather than requiring a
+  second full run, and it is the one AR4 feature none of the above stretch
+  exercises touch.

@@ -35,9 +35,10 @@ ASSUMPTIONS
 - Baseline faithfulness averages 4.65 and the degraded copy 3.45, both by
   construction in build_baseline_logs.py and make_degraded_copy. The 4.0 threshold
   sits between them deliberately. If you change either, keep that ordering.
-- compare_models and time_series_drift have no call sites anywhere in the repo. They
-  work when invoked directly, but the screens that use them will be their first real
-  exercise.
+- compare_models and time_series_drift have now been exercised against real data (see
+  DATASET FOR THIS LESSON below) and both run clean. regressions_by_slice has been
+  exercised too and runs clean, producing a single slice; see that section for why
+  and what the screen teaches instead.
 
 
 EXPECTED RESULT
@@ -61,11 +62,51 @@ SIGNATURES
   compare_models(named_runs)     {model_name: [run, ...]}
 
 
-BLOCKED ON DATA, NOT CODE
+DATASET FOR THIS LESSON
 
-1. compare_models wants two run-log variants from genuinely different generator
-   configs. make_degraded_copy is a synthetic stand-in, not a model comparison.
-2. time_series_drift wants three to five timestamped snapshots showing a metric
-   degrade. build_baseline_logs.py emits one point-in-time set of 24 rows.
+Full derivation (how each file was generated, what config knob changed, what
+story it tells, what to be careful quoting) lives in EO3's solution_notes.txt.
+This section says which files this lesson's screens should load.
 
-Both are EO3 shipping blockers. Neither blocks authoring AR3's other screens.
+compare_models: generated_eval_artifacts/live_run_logs.jsonl (24 runs,
+gpt-4o-mini) vs generated_eval_artifacts/live_run_logs_model_variant_gpt5nano.jsonl
+(same 24 items, same judge, only the generation model changed):
+
+  named_runs = {
+      "gpt-4o-mini": <live_run_logs.jsonl runs>,
+      "gpt-5-nano":  <live_run_logs_model_variant_gpt5nano.jsonl runs>,
+  }
+
+Verified against the real compare_models(named_runs): p95 latency 15778 ->
+50759, cost $0.01295 -> $0.00837 total, faithfulness/citation metrics roughly
+flat. This is a cost-vs-latency screen. The cheaper model is dramatically
+slower, not lower quality. Don't frame it as a quality regression.
+
+Two more variants exist in generated_eval_artifacts,
+live_run_logs_rerank_top2_variant.jsonl and
+live_run_logs_token_budget2000_variant.jsonl, but they're config changes
+(same model), not a second model, so they don't fit compare_models'
+{model_name: [run, ...]} shape. They're the data behind regressions_by_slice
+below instead.
+
+time_series_drift: generated_eval_artifacts/drift_snapshots.jsonl, four
+labeled snapshots, load as [(row["label"], row["runs"]) for row in
+read_jsonl(path)]. Verified against the real time_series_drift(snapshots):
+per-step avg_faithfulness_score regressions of -0.10, -0.20, -0.90, a slow
+decline that cliffs on the last step. This is a small showcase fixture.
+Don't build it out further.
+
+regressions_by_slice: the call is reference vs.
+live_run_logs_token_budget2000_variant.jsonl. slice_by_tag groups by
+run.get("case_type"), and neither file carries one; they're built from the
+EO1 curated set, not advanced_rag_cases.jsonl (the only file with real
+case_type tags). Verified against the real regressions_by_slice: it produces
+a single "eval_item" bucket, identical to the plain baseline-vs-current diff.
+
+This is the intended shape for this lesson, not a placeholder. The screen
+teaches the function signature and call shape, not a per-slice breakdown; say
+that on the screen. expected_behavior is not used as a case_type stand-in
+here (the 24-item set splits 20/3/1 across answer/refuse/clarify, too
+lopsided for a believable per-slice regression), and no case_type-tagged data
+from advanced_rag_cases.jsonl was generated for this. Out of scope for this
+lesson.
