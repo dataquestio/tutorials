@@ -2,7 +2,7 @@
 
 Everything *inside* the pipeline (security overlay, self-RAG loop, judge,
 evaluation metrics, run-log schema, monitoring helpers) was introduced in
-earlier lessons. AR4 introduces the one missing piece a real production
+earlier lessons. This guided project introduces the one missing piece a real production
 team needs: a **shape** for wiring them together that's open to extension
 without rewriting the harness every time a new failure mode shows up.
 

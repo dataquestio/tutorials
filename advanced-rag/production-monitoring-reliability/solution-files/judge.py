@@ -237,9 +237,6 @@ def heuristic_judge(query, answer, evidence, cited_ids=None, expected_behavior=N
     else:
         refusal_correctness = "not_applicable"
 
-    # relevance is deliberately unscored here. Deciding whether a better-suited
-    # Git command exists needs Git knowledge, not substring rules, so the
-    # heuristic cannot answer it. See the module docstring.
     rationale_parts.append("Relevance not scored: the heuristic judge cannot assess it.")
 
     return {
@@ -275,8 +272,8 @@ def llm_judge(query, answer, evidence, client=None, model="gpt-4o-mini", cited_i
     evidence-only dimensions in the first, and `relevance` in the second,
     for the interference reason documented above `RELEVANCE_SYSTEM_PROMPT`.
 
-    Pass `score_relevance=False` to skip the second call and get the four
-    EO2 dimensions only."""
+    Pass `score_relevance=False` to skip the second call and get just the four
+    evidence-only dimensions."""
     if client is None:
         raise JudgeUnavailable(
             "No OpenAI-compatible client was passed. Either provide a client "

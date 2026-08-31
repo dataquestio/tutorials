@@ -4,7 +4,7 @@ Runs the draft -> judge -> decide loop introduced in
 `gitquest.run_self_rag_loop` against:
 
 1. The `self_rag_retry` subset of `advanced_rag_cases.jsonl` (built in
-   EO1) - cases where the first retrieval is intentionally too narrow.
+   the evaluation course) - cases where the first retrieval is intentionally too narrow.
 2. A small sample of curated eval items so the lesson shows the loop on
    ordinary answer / clarify / refuse queries too.
 

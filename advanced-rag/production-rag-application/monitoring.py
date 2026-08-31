@@ -296,7 +296,7 @@ def main():
     parser.add_argument("--current-log", type=Path, default=None,
                         help="Path to a current run log. Defaults to a degraded copy of the baseline.")
     parser.add_argument("--use-production-thresholds", action="store_true",
-                        help="Check against the tighter PRODUCTION_THRESHOLDS instead of the EO3 defaults.")
+                        help="Check against the tighter PRODUCTION_THRESHOLDS instead of the default thresholds.")
     args = parser.parse_args()
 
     thresholds = PRODUCTION_THRESHOLDS if args.use_production_thresholds else DEFAULT_THRESHOLDS
