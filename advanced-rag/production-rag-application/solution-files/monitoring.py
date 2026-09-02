@@ -220,7 +220,7 @@ def compare_models(named_runs):
 
     `named_runs` is a dict of `{model_name: [run, ...]}`. Returns a
     dict with per-model summaries, the metric deltas relative to the first
-    model, and a list of clear winners per metric."""
+    model, and which run set leads on each metric."""
     summaries = {name: summarize_runs(runs) for name, runs in named_runs.items()}
     if len(summaries) < 2:
         return {"summaries": summaries, "deltas": {}, "winners": {}}
@@ -254,8 +254,8 @@ def time_series_drift(snapshots):
     """Compute per-step drift over an ordered list of (label, runs) snapshots.
 
     Use this to show a metric degrading across a sequence of nightly runs.
-    Returns a list of step dicts with the prior label, this label, and the
-    metric deltas between them."""
+    Returns a dict with each snapshot's summary and, for every step, the
+    comparison and regressions between it and the one before."""
     summaries = [(label, summarize_runs(runs)) for label, runs in snapshots]
     steps = []
     for i in range(1, len(summaries)):
@@ -273,8 +273,8 @@ def time_series_drift(snapshots):
 
 def regressions_by_slice(baseline_runs, current_runs):
     """Per-case-type regression breakdown. Combines slice_by_tag with
-    regression_signals so the lesson can say 'security cases regressed by X'
-    rather than only producing an overall delta."""
+    regression_signals so you can see which case types regressed
+    rather than only an overall delta."""
     baseline_buckets = slice_by_tag(baseline_runs)
     current_buckets = slice_by_tag(current_runs)
     out = {}
