@@ -1,7 +1,7 @@
 """Foundation Metrics and Evaluation Frameworks.
 
 Deterministic builder that turns the seed `git_support_eval/eval.jsonl` into
-the foundational evaluation artifacts EO and AR both consume:
+the foundational evaluation artifacts Evaluating LLM Outputs and Advanced RAG both consume:
 
 - `eval_items_curated.jsonl` - deduplicated draft eval contract with one row
   per unique query, validation warnings, and answerability-mapped behavior
@@ -12,9 +12,9 @@ the foundational evaluation artifacts EO and AR both consume:
   canonical Git corpus
 - `artifact_manifest.json` - counts, warning summaries, source paths
 
-EO2 and EO3 each ship their own builders that produce the remaining
+Evaluating LLM Outputs lesson 2 and 3 each ship their own builders that produce the remaining
 artifacts in the bundle (judge calibration examples and baseline run
-logs). By the end of EO3 the full `generated_eval_artifacts/` directory
+logs). By the end of lesson 3 the full `generated_eval_artifacts/` directory
 exists and is consumed unchanged by AR1 through AR4.
 
 Usage:
@@ -485,7 +485,7 @@ def find_rag_dir():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Build the EO1 GitQuest evaluation artifacts from the seed dataset.")
+    parser = argparse.ArgumentParser(description="Build the Evaluating LLM Outputs lesson 1 GitQuest evaluation artifacts from the seed dataset.")
     parser.add_argument("--rag-dir", type=Path, default=None,
                         help="Directory containing git_support_eval/ and git_kb_corpus_scoped/. Defaults to data discovery.")
     parser.add_argument("--output-dir", type=Path, default=Path("generated_eval_artifacts"),
@@ -529,7 +529,7 @@ def main():
     write_jsonl(output_dir / "advanced_rag_cases.jsonl", advanced_cases)
     write_json(output_dir / "artifact_manifest.json", manifest)
 
-    print(f"Wrote EO1 artifacts to {output_dir}")
+    print(f"Wrote Evaluating LLM Outputs lesson 1 artifacts to {output_dir}")
     print(json.dumps(manifest, indent=2, sort_keys=True))
 
 

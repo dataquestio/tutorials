@@ -1,6 +1,6 @@
 """Judge calibration examples builder.
 
-Produces `judge_calibration_examples.jsonl` next to the EO1 artifacts.
+Produces `judge_calibration_examples.jsonl` next to the Evaluating LLM Outputs lesson 1 artifacts.
 Each example is a fixed (query, evidence, answer) triple with the score
 the lesson author expects across faithfulness, citation correctness,
 command safety, and refusal correctness. Learners compare the heuristic
@@ -526,7 +526,7 @@ def find_rag_dir():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Write judge calibration examples for EO2.")
+    parser = argparse.ArgumentParser(description="Write judge calibration examples for Evaluating LLM Outputs lesson 2.")
     parser.add_argument("--rag-dir", type=Path, default=None,
                         help="Directory containing generated_eval_artifacts/.")
     parser.add_argument("--output-name", default="judge_calibration_examples.jsonl",
