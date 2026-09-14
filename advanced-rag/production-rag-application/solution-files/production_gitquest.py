@@ -54,7 +54,6 @@ from gitquest import (
     PIPELINE_VERSION,
     ask_gitquest_secured,
     build_run_log,
-    corpus,
     run_self_rag_loop,
 )
 from judge import faithfulness_score, heuristic_judge
@@ -88,23 +87,6 @@ def default_rag_dir():
     if Path("/workspace/rag").exists():
         return Path("/workspace/rag")
     return Path("rag")
-
-
-def evidence_payload(chunk_ids):
-    """Hydrate corpus chunk ids into judge-shaped evidence dicts.
-
-    Use this for curated evidence, for example when you want to inspect what a
-    case's answer key actually contains. Do NOT pass the result to a judge as the
-    `evidence` argument: see the note above `secured_pipeline_handler`."""
-    payload = []
-    for chunk_id in chunk_ids:
-        if chunk_id in corpus:
-            payload.append({
-                "chunk_id": chunk_id,
-                "title": corpus[chunk_id]["title"],
-                "text": corpus[chunk_id]["text"],
-            })
-    return payload
 
 
 # ---------------------------------------------------------------------------
