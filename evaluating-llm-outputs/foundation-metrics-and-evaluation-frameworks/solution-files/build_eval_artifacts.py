@@ -1,7 +1,7 @@
 """Foundation Metrics and Evaluation Frameworks.
 
 Deterministic builder that turns the seed `git_support_eval/eval.jsonl` into
-the foundational evaluation artifacts EO and AR both consume:
+the foundational evaluation artifacts Evaluating LLM Outputs course and Advanced RAG course both consume:
 
 - `eval_items_curated.jsonl` - deduplicated draft eval contract with one row
   per unique query, validation warnings, and answerability-mapped behavior
@@ -12,10 +12,10 @@ the foundational evaluation artifacts EO and AR both consume:
   canonical Git corpus
 - `artifact_manifest.json` - counts, warning summaries, source paths
 
-EO2 and EO3 each ship their own builders that produce the remaining
+Evaluating LLM Outputs lesson 2 and 3 each ship their own builders that produce the remaining
 artifacts in the bundle (judge calibration examples and baseline run
-logs). By the end of EO3 the full `generated_eval_artifacts/` directory
-exists and is consumed unchanged by AR1 through AR4.
+logs). By the end of lesson 3 the full `generated_eval_artifacts/` directory
+exists and is consumed unchanged by Advanced RAG lessons 1-4.
 
 Usage:
     python build_eval_artifacts.py --rag-dir <path/to/rag> --output-dir <path>
