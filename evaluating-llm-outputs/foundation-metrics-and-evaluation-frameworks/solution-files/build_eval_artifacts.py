@@ -12,10 +12,10 @@ the foundational evaluation artifacts Evaluating LLM Outputs course and Advanced
   canonical Git corpus
 - `artifact_manifest.json` - counts, warning summaries, source paths
 
-Evaluating LLM Outputs lesson 2 and 3 each ship their own builders that produce the remaining
+Later lessons in this course each ship their own builders that produce the remaining
 artifacts in the bundle (judge calibration examples and baseline run
-logs). By the end of lesson 3 the full `generated_eval_artifacts/` directory
-exists and is consumed unchanged by Advanced RAG lessons 1-4.
+logs). By the end of the course the full `generated_eval_artifacts/` directory
+exists and is consumed unchanged by the Advanced RAG course.
 
 Usage:
     python build_eval_artifacts.py --rag-dir <path/to/rag> --output-dir <path>
@@ -485,7 +485,7 @@ def find_rag_dir():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Build the EO1 GitQuest evaluation artifacts from the seed dataset.")
+    parser = argparse.ArgumentParser(description="Build the Evaluating LLM Outputs GitQuest evaluation artifacts from the seed dataset.")
     parser.add_argument("--rag-dir", type=Path, default=None,
                         help="Directory containing git_support_eval/ and git_kb_corpus_scoped/. Defaults to data discovery.")
     parser.add_argument("--output-dir", type=Path, default=Path("generated_eval_artifacts"),
@@ -519,8 +519,8 @@ def main():
         "source_full_corpus_path": str(full_corpus_path),
         "produced_by": "evaluating-llm-outputs/foundation-metrics-and-evaluation-frameworks",
         "next_steps": [
-            "EO2 build_judge_calibration.py appends judge_calibration_examples.jsonl",
-            "EO3 build_baseline_logs.py appends baseline_run_logs.jsonl",
+            "build_judge_calibration.py appends judge_calibration_examples.jsonl",
+            "build_baseline_logs.py appends baseline_run_logs.jsonl",
         ],
     })
 
@@ -529,7 +529,7 @@ def main():
     write_jsonl(output_dir / "advanced_rag_cases.jsonl", advanced_cases)
     write_json(output_dir / "artifact_manifest.json", manifest)
 
-    print(f"Wrote EO1 artifacts to {output_dir}")
+    print(f"Wrote Evaluating LLM Outputs artifacts to {output_dir}")
     print(json.dumps(manifest, indent=2, sort_keys=True))
 
 

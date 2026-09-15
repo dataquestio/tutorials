@@ -3,9 +3,9 @@
 Generates a synthetic `baseline_run_logs.jsonl` file in the 15-field
 Run Log shape. The file is consumed by `monitoring.py` to teach
 baseline-versus-current comparison, threshold alerts, and drift
-detection in Evaluating LLM Outputs lesson 3, and by the Advanced RAG monitoring lesson later.
+detection in this course, and by the Advanced RAG course later.
 
-Each generated row is built directly from the Evaluating LLM Outputs lesson 1 curated eval set so
+Each generated row is built directly from the curated eval set from an earlier lesson so
 the `query_id`s match the ones Evaluating LLM Outputs and Advanced RAG use everywhere else.
 
 Usage:
