@@ -12,7 +12,7 @@ Consumes Run Log entries in the shape emitted by
   degraded current run from the baseline so the lesson can demonstrate
   regressions without depending on live API calls
 
-The Advanced RAG monitoring lesson ships its own copy of this module
+The Advanced RAG course ships its own copy of this module
 that adds production wiring on top.
 """
 

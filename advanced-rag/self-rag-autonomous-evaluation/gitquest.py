@@ -283,8 +283,8 @@ def build_run_log(query_id, result, config, metrics=None, judgement=None, run_id
     """Build a 15-field Run Log entry from a GitQuest result.
 
     The shape matches the contract consumed by monitoring.py and by the
-    production harness in AR4: identical field names across courses so the
-    same dashboards work everywhere."""
+    Advanced RAG course's production harness: identical field names across
+    courses so the same dashboards work everywhere."""
     import uuid
     chunks = result.get("retrieved_chunks") or []
     citations = [c["chunk_id"] for c in result.get("citations") or []]
