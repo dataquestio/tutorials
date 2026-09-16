@@ -1,6 +1,6 @@
 """Judge calibration examples builder.
 
-Produces `judge_calibration_examples.jsonl` next to the EO1 artifacts.
+Produces `judge_calibration_examples.jsonl` next to the Evaluating LLM Outputs lesson 1 artifacts.
 Each example is a fixed (query, evidence, answer) triple with the score
 the lesson author expects across faithfulness, citation correctness,
 command safety, and refusal correctness. Learners compare the heuristic
