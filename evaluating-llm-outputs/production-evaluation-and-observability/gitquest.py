@@ -233,6 +233,7 @@ def ask_gitquest(query, n_results=10, token_budget=6000):
 
     # Step 4: build context and generate
     context = build_context(final_chunks)
+    prompt = SYSTEM_PROMPT.format(context=context)
     response = oai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
