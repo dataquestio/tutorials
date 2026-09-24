@@ -1,0 +1,20 @@
+{
+  "_note": "Nickname/typo/common-name-variant -> canonical speciesCode. resolve_species checks this table (case-insensitive, after basic normalization) before/alongside fuzzy matching against comName/sciName. Keys are lowercased.",
+  "aliases": {
+    "canadas": "cangoo",
+    "canada goose": "cangoo",
+    "canada geese": "cangoo",
+    "canadian goose": "cangoo",
+    "canadian geese": "cangoo",
+    "canda goose": "cangoo",
+    "red-tail": "rethaw",
+    "redtail": "rethaw",
+    "red tailed hawk": "rethaw",
+    "annas hummingbird": "annhum",
+    "anna hummingbird": "annhum",
+    "american robbin": "amerob",
+    "grackle": "grtgra",
+    "grackles": "grtgra"
+  },
+  "_teaching_note": "Mapping 'grackle'/'grackles' straight to grtgra (Great-tailed Grackle) is a deliberate simplification: in the real world a bare 'grackle' is arguably a spuh, but for this western-range count the club treats unqualified 'grackle' as Great-tailed Grackle (the grackle actually found alongside Anna's Hummingbird). The ambiguity the project cares about lives in COUNT ('handful') and DATE ('last week'), not in this alias. Point this out in the writeup so learners see that alias tables encode local convention, not universal truth."
+}

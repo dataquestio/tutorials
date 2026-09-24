@@ -1,0 +1,32 @@
+{
+  "_note": "Answer key for the three source files. Processing order is fixed: logbook -> email -> spreadsheet, top to bottom. record_ids are assigned in commit order (obs-1, obs-2, ...). Dedup key = (species_code, ISO date, location lower+strip); first committed wins.",
+  "_date_anchors": {
+    "logbook": "2026-05-09 (header)",
+    "email": "received 2026-05-16; 'yesterday' -> 2026-05-15; 'last week' -> unrecoverable to a day",
+    "spreadsheet": "year 2026; 'M/D' -> 2026-0M-0D"
+  },
+  "clean_roster": [
+    {"record_id": "obs-1",  "species_code": "cangoo",  "common_name": "Canada Goose",       "scientific_name": "Branta canadensis",  "count": 3, "date": "2026-05-09", "location": "Cedar Ridge", "source": "logbook"},
+    {"record_id": "obs-2",  "species_code": "mallar3", "common_name": "Mallard",            "scientific_name": "Anas platyrhynchos", "count": 2, "date": "2026-05-09", "location": "Cedar Ridge", "source": "logbook"},
+    {"record_id": "obs-3",  "species_code": "cedwax",  "common_name": "Cedar Waxwing",      "scientific_name": "Bombycilla cedrorum","count": 6, "date": "2026-05-09", "location": "Cedar Ridge", "source": "logbook"},
+    {"record_id": "obs-4",  "species_code": "annhum",  "common_name": "Anna's Hummingbird", "scientific_name": "Calypte anna",       "count": 2, "date": "2026-05-09", "location": "Cedar Ridge", "source": "logbook"},
+    {"record_id": "obs-5",  "species_code": "rethaw",  "common_name": "Red-tailed Hawk",    "scientific_name": "Buteo jamaicensis",  "count": 1, "date": "2026-05-09", "location": "Cedar Ridge", "source": "logbook"},
+    {"record_id": "obs-6",  "species_code": "grbher3", "common_name": "Great Blue Heron",   "scientific_name": "Ardea herodias",     "count": 1, "date": "2026-05-15", "location": "Marsh",       "source": "email"},
+    {"record_id": "obs-7",  "species_code": "wooduc",  "common_name": "Wood Duck",          "scientific_name": "Aix sponsa",         "count": 2, "date": "2026-05-15", "location": "Marsh",       "source": "email"},
+    {"record_id": "obs-8",  "species_code": "annhum",  "common_name": "Anna's Hummingbird", "scientific_name": "Calypte anna",       "count": 1, "date": "2026-05-15", "location": "Marsh",       "source": "email"},
+    {"record_id": "obs-9",  "species_code": "grtgra",  "common_name": "Great-tailed Grackle","scientific_name": "Quiscalus mexicanus","count": 4, "date": "2026-05-10", "location": "Cedar Ridge", "source": "spreadsheet"},
+    {"record_id": "obs-10", "species_code": "cangoo",  "common_name": "Canada Goose",       "scientific_name": "Branta canadensis",  "count": 8, "date": "2026-05-12", "location": "North Marsh", "source": "spreadsheet"},
+    {"record_id": "obs-11", "species_code": "annhum",  "common_name": "Anna's Hummingbird", "scientific_name": "Calypte anna",       "count": 3, "date": "2026-05-12", "location": "North Marsh", "source": "spreadsheet"}
+  ],
+  "review_queue": [
+    {"raw_input": "handful of grackles by the barn", "source": "logbook", "reason": "ambiguous_count", "best_guess": {"species_code": "grtgra"}, "existing_record_id": null},
+    {"raw_input": "some kind of gull, too far to tell", "source": "logbook", "reason": "ambiguous_species", "best_guess": {"category": "spuh", "common_name": "gull sp."}, "existing_record_id": null},
+    {"raw_input": "Canadas x12 (second group, later)", "source": "logbook", "reason": "possible_duplicate", "best_guess": {"species_code": "cangoo", "count": 12, "date": "2026-05-09", "location": "Cedar Ridge"}, "existing_record_id": "obs-1"},
+    {"raw_input": "A couple hawks were circling the tree line but I honestly couldn't tell which", "source": "email", "reason": "ambiguous_species", "best_guess": {"category": "spuh", "common_name": "hawk sp."}, "existing_record_id": null},
+    {"raw_input": "sometime last week I saw a flock of grackles out here too, didn't count them", "source": "email", "reason": "missing_date", "best_guess": {"species_code": "grtgra"}, "existing_record_id": null},
+    {"raw_input": "Canda Goose | 12 (est) | Cedar Ridge | 5/9", "source": "spreadsheet", "reason": "possible_duplicate", "best_guess": {"species_code": "cangoo", "count": 12, "date": "2026-05-09", "location": "Cedar Ridge"}, "existing_record_id": "obs-1"},
+    {"raw_input": "American Robbin | 5 | (blank) | 5/9/26", "source": "spreadsheet", "reason": "incomplete_record", "best_guess": {"species_code": "amerob", "count": 5, "date": "2026-05-09", "location": null}, "existing_record_id": null},
+    {"raw_input": "(blank) | 2 | Marsh | 5/9", "source": "spreadsheet", "reason": "incomplete_record", "best_guess": null, "existing_record_id": null},
+    {"raw_input": "Jackalope Warbler | 1 | Cedar Ridge | 5/11", "source": "spreadsheet", "reason": "out_of_taxonomy", "best_guess": null, "existing_record_id": null}
+  ]
+}
