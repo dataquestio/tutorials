@@ -2,6 +2,7 @@
   "_note": "Nickname/typo/common-name-variant -> canonical speciesCode. resolve_species checks this table (case-insensitive, after basic normalization) before/alongside fuzzy matching against comName/sciName. Keys are lowercased.",
   "aliases": {
     "canadas": "cangoo",
+    "canada": "cangoo",
     "canada goose": "cangoo",
     "canada geese": "cangoo",
     "canadian goose": "cangoo",

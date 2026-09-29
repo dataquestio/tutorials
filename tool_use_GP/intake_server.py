@@ -22,7 +22,7 @@ class Observation(BaseModel):
     scientific_name: str
     count: int = Field(gt=0)
     date: str          # ISO YYYY-MM-DD
-    location: str
+    location: str = Field(min_length=1)   # a blank location is incomplete, not a valid record
     source: str
 
 
