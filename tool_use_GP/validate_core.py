@@ -39,12 +39,14 @@ check("'Canadas' -> cangoo", code_of("Canadas"), "cangoo")
 check("'Quiscalus mexicanus' -> grtgra", code_of("Quiscalus mexicanus"), "grtgra")
 check("'annas hummingbird' -> annhum", code_of("annas hummingbird"), "annhum")
 check("'red-tail' -> rethaw", code_of("red-tail"), "rethaw")
-check("'mallards' -> mallar3", code_of("mallards"), "mallar3")
+check("'mallard' -> mallar3", code_of("mallard"), "mallar3")
 check("'American Robbin' -> amerob", code_of("American Robbin"), "amerob")
 check("'Jackalope Warbler' -> no_match", code_of("Jackalope Warbler"), "no_match")
 check("'gull' -> spuh", category_of("gull"), "spuh")
-check("'some kind of gull' -> spuh", category_of("some kind of gull"), "spuh")
-check("'a couple hawks' -> spuh", category_of("a couple hawks"), "spuh")
+check("'hawk' -> spuh", category_of("hawk"), "spuh")
+# resolve_species does an exact lookup only; extracting the name from a phrase is the
+# agent's job, so a whole phrase must NOT resolve.
+check("'some kind of gull' -> no_match (agent must strip it)", code_of("some kind of gull"), "no_match")
 
 print("\n--- validate ---")
 good = {"species_code": "grtgra", "common_name": "Great-tailed Grackle",

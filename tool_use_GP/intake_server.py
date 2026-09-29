@@ -57,13 +57,12 @@ BY_CODE, LOOKUP = load_taxonomy()
 
 
 def resolve(text):
-    """Return the matching taxon record, or None."""
+    """Return the matching taxon record, or None. Exact dict lookup only (no fuzzy matching):
+    the caller passes the species name; we match it against canonical names, scientific names,
+    and the alias table. Pulling the species out of surrounding words is the agent's job."""
     query = normalize(text)
     if query in LOOKUP:
         return LOOKUP[query]
-    for name in LOOKUP:                           # fallback: a known name inside the text
-        if name in query:
-            return LOOKUP[name]
     return None
 
 
@@ -134,7 +133,11 @@ def resolve_species(text: str):
     group like "gull sp.") or match is "no_match", flag the record instead of committing.
 
     Args:
-        text: the species text exactly as written, e.g. 'Canda Goose', 'gull'
+        text: the singular species name from the note, with surrounding words removed.
+            Drop counts and filler and make it singular: 'pair of mallards' -> 'mallard',
+            'half a dozen cedar waxwings' -> 'cedar waxwing', 'some kind of gull' -> 'gull',
+            'a couple hawks' -> 'hawk'. Keep the observer's own spelling; do NOT fix typos
+            ('Canda Goose' stays 'Canda Goose'). This tool only does an exact lookup.
     """
     match = resolve(text)
     if match is None:
