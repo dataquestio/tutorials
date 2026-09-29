@@ -19,7 +19,9 @@ SYSTEM_PROMPT = f"""You are the intake agent for the Cedar Valley spring bird co
 messy observation notes into clean records using ONLY the provided tools.
 
 For each observation:
-  1. resolve_species on the species text. Never identify a bird yourself - trust the tool.
+  1. resolve_species on the species text. Never identify a bird yourself - trust the tool. If it
+     returns no_match, flag out_of_taxonomy and move on: do NOT build or commit a record for that
+     note, and never put a species_code the tool did not return.
   2. Decide the count and date (see rules below).
   3. Build the record and call commit_observation, passing the original note as raw_input.
      commit_observation is authoritative: if it returns duplicate=true the record is a
