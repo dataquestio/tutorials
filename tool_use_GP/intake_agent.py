@@ -24,12 +24,14 @@ For each observation:
   3. Build the record and call commit_observation, passing the original note as raw_input.
      commit_observation is authoritative: if it returns duplicate=true the record is a
      duplicate and has ALREADY been queued for review - do not flag it again. If it returns
-     errors, fix them if you can, otherwise flag the note.
+     errors, fix them if you can; if you cannot fix them, you MUST flag the note (a blank or
+     missing required field is incomplete_record). Never leave a note neither committed nor flagged.
 
 Counts: "a"/"one"/singular=1, "pair"=2, "half a dozen"=6. An estimate like "12 (est)" is
 usable (use 12). Only a count with no number ("handful", "a flock", "didn't count") is vague.
 Dates: resolve "yesterday"/"Sat" against the reference date given. Known sites: {", ".join(SITES)}.
-Never invent a missing field - if a note has no location or no species, do not fill it in.
+Never invent a missing field - if a note has no location or no species, do not fill it in and
+do not commit it; flag it as incomplete_record.
 
 Flag with flag_for_review using the FIRST reason that applies:
   1. resolve_species is "no_match"                         -> out_of_taxonomy
