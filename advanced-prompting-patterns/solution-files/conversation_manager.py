@@ -3,10 +3,13 @@ import tiktoken
 import json
 from openai import OpenAI
 from datetime import datetime
+from dotenv import load_dotenv
 
-DEFAULT_API_KEY = os.environ.get("TOGETHER_API_KEY")
-DEFAULT_BASE_URL = "https://api.together.xyz/v1"
-DEFAULT_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct-Lite" # Link to models: https://api.together.ai/models
+load_dotenv()
+
+DEFAULT_API_KEY = os.environ.get("OPENAI_API_KEY")
+DEFAULT_BASE_URL = None  # Use OpenAI's default endpoint
+DEFAULT_MODEL = "gpt-4o-mini"  # Link to models: https://platform.openai.com/docs/models
 DEFAULT_TEMPERATURE = 0.7
 DEFAULT_MAX_TOKENS = 350
 DEFAULT_TOKEN_BUDGET = 4096
@@ -18,8 +21,8 @@ class ConversationManager:
             api_key = DEFAULT_API_KEY
             if not api_key:
                 raise ValueError(
-                    "TOGETHER_API_KEY environment variable is not set. "
-                    "Please set it or pass an api_key directly to ConversationManager."
+                    "OPENAI_API_KEY environment variable is not set. "
+                    "Add it to a .env file or pass an api_key directly to ConversationManager."
                 )
         if not base_url:
             base_url = DEFAULT_BASE_URL
