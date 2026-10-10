@@ -1,0 +1,73 @@
+C2 L4 EVALUATING AGENTS: AUTHORING NOTES
+Delete before shipping the lesson.
+
+DATA: learner dataset usgs (day CSV files only). How the feed is simulated, the
+quirks, the frozen raw API pull, and the build script are in ../data-build/usgs/
+(README.md, build_usgs.py, raw/). Never copy them into the learner dataset. Remove
+../data-build/ once the course is done.
+
+
+WHAT TO DO
+
+The lesson adds evaluate_agent.py:
+
+- A fixed suite of 4 days (2026-06-07, 06-10, 06-16, 06-24). Before each case the catalog is
+  rebuilt up to the previous day without the model, so every case starts from the same state.
+- Expected outcomes are computed from the data, not the model: new events with mag >= 6.0 must
+  be flagged; events meeting the alert policy must have a queued send_alert; apply_day_to_catalog
+  exactly once; a progress note for the day.
+- Metrics from the trace log and state files: task_success (all checks), tool_call_accuracy
+  (allowed, error-free, non-redundant calls / all calls; a denied send_alert is expected and not
+  counted as bad), steps and tokens per case.
+- Regression suite: `compare` flags any drop in success rate, a drop of more than 0.10 in tool
+  accuracy, or more than 30% more tokens or steps. Exit code 1 on regression, so it can gate CI.
+- --repeats N runs every case N times. Teach it with the noise result below.
+
+Expected outcome per suite day (computed by expected_outcome):
+- 06-07: flag us7000sr7l, us7000srb1, us7000srbe, us7000src3; alert us7000srb1
+- 06-10: flag us7000srxn
+- 06-16: flag us7000st95, us7000stbz
+- 06-24: flag us6000t7zc, us6000t7zp, us6000t7zq; alert us6000t7zc, us6000t7zp
+
+
+ASSUMPTIONS
+
+- Data /workspace/data/usgs. Model gpt-6-luna, reasoning_effort "none".
+- Variants are configuration changes defined in VARIANTS: baseline, no_skills (skills folder
+  missing), max_steps_4.
+
+
+EXPECTED RESULT
+
+Must demonstrate: a config change caught by the regression suite.
+
+  cd solution-files
+  python evaluate_agent.py run --data-dir /workspace/data/usgs --variant baseline --repeats 2 --out results/baseline.json
+  python evaluate_agent.py run --data-dir /workspace/data/usgs --variant max_steps_4 --repeats 2 --out results/max_steps_4.json
+  python evaluate_agent.py compare results/baseline.json results/max_steps_4.json
+
+Measured 2026-10-09 (final code), 8 cases per variant:
+
+| Variant | Success rate | Tool accuracy | Mean steps | Mean tokens |
+|---|---|---|---|---|
+| baseline | 0.625 | 0.984 | 7.5 | 19,492 |
+| max_steps_4 | 0.0 | 0.979 | 4.0 | 6,806 |
+
+compare printed "REGRESSION: task_success_rate: 0.625 -> 0.0" and exited 1. Cost for both
+variants: about 210,000 tokens.
+
+Two findings worth teaching:
+
+1. Run-to-run noise is large. Single-run baseline vs no_skills, measured twice:
+   run 1: baseline 0.75, no_skills 0.5 (regression reported);
+   run 2: baseline 0.5, no_skills 0.75 (no regression).
+   Four single cases cannot separate a real change from noise. Hence --repeats, and hence
+   demonstrating with max_steps_4, whose effect is far larger than the noise.
+2. The baseline itself fails 3 of 8 cases, always the same way: it flags the largest new event
+   but skips other M6.0 to 6.9 events (06-07: us7000sr7l, us7000srbe, us7000src3; 06-24:
+   us6000t7zq), even though apply_day_to_catalog lists them in largest_new_events and the
+   daily-triage skill says to flag each one. Good material for "what do you fix after an eval".
+
+History: the first eval run exposed a real tool gap (apply_day_to_catalog only returned a count
+of new events, so the agent could not see which were large). largest_new_events was added to the
+starter's tools.py and propagated through every lesson; all measurements above use the fixed tool.

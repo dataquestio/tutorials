@@ -1,0 +1,67 @@
+GP AUTHORING NOTES: Build a Data Analysis Agent (DOHMH restaurant inspections)
+Delete before shipping the lesson.
+
+DATA: learner dataset dohmh (inspections.csv, the unmodified NYC Open Data export,
+so it has no build folder; its quirks are listed under ASSUMPTIONS below). The
+course's other build files are in ../data-build/. Remove ../data-build/ once the
+course is done.
+
+
+WHAT TO DO
+
+Learners point the lesson 4 agent at a new dataset (dohmh/inspections.csv),
+write at least one skill for it, and answer questions.txt. The root has the
+lesson 4 code, its two 311 skills, questions.txt, and test_solution.py.
+
+Reference solution in solution-files/:
+- skills/restaurant-inspections/SKILL.md replaces the two 311 skills, which
+  would mislead the agent on this data (different statuses, date formats,
+  boroughs).
+- run_questions.py answers every question in one shared workspace and writes
+  answers.md.
+- test_solution.py and questions.txt, identical to the root.
+
+This is the one place a solution removes files its root had (the 311 skills).
+The spec's "solution MUST NOT remove anything" rule needs a GP exception.
+
+Commands (run from solution-files/):
+  python test_solution.py --data-dir <dohmh>
+  python run_questions.py --data-dir <dohmh> --output answers.md
+
+
+ASSUMPTIONS
+
+- Data quirks the skill covers: one row per violation (inspection key is CAMIS +
+  INSPECTION DATE + INSPECTION TYPE); 01/01/1900 placeholder date for 3,830
+  never-inspected restaurants; BORO "0" on 344 rows; grades N/Z/P pending; SCORE
+  repeats on every violation row; lower score is better.
+- test_solution.py checks harness behaviour only. It also passes on the root
+  before the learner changes anything, because the root already has working
+  lesson 4 code and the 311 skills. Learner work is judged by the answers.
+
+
+EXPECTED RESULT (measured 2026-10-09)
+
+test_solution.py: 16 tests, all pass in root and solution-files, with
+OPENAI_API_KEY unset, ~0.1 s.
+
+Reference answers (independent pandas, matching the agent's final run):
+1. 31,405 restaurants; 3,830 never inspected.
+2. Cuisines with >= 300 restaurants, share of inspections with a critical
+   violation: Chinese 82.1%, Spanish 82.0%, Italian 81.1%, Thai 80.0%,
+   Indian 80.0%.
+3. Latest A/B/C grade is A: Bronx 88.9%, Brooklyn 90.1%, Manhattan 90.8%,
+   Queens 86.0%, Staten Island 89.4%.
+4. Cycle inspections, mean score: initial 17.6 (n=46,758), re-inspection 16.9
+   (n=17,321); median 13 for both. Lower is better.
+5. 2025 top violation codes: 10F 12,270; 08A 7,108; 10B 5,767; 06C 5,747;
+   02G 5,726.
+
+run_questions.py full run: all 5 final, 27 steps total, 61k in / 5k out.
+
+Two fixes came out of testing:
+- Q2: the agent first filtered on "300 inspections" instead of "300
+  restaurants". A "Before answering" section in the skill (re-check every
+  filter and its unit) fixed it.
+- Q3 was ambiguous ("most recent letter grade"); reworded to "most recent final
+  grade ... use only A, B, and C grades and ignore pending ones".

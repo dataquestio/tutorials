@@ -1,0 +1,74 @@
+C2 L3 MULTI-AGENT ORCHESTRATION: AUTHORING NOTES
+Delete before shipping the lesson.
+
+DATA: learner dataset usgs (day CSV files only). How the feed is simulated, the
+quirks, the frozen raw API pull, and the build script are in ../data-build/usgs/
+(README.md, build_usgs.py, raw/). Never copy them into the learner dataset. Remove
+../data-build/ once the course is done.
+
+
+WHAT TO DO
+
+The lesson adds orchestrator.py:
+
+- run_orchestrator(task, config, client=None): a small loop with one tool, delegate. Each
+  delegate call is an ordinary run_agent call with a fresh conversation (the subagent), and
+  only its final report returns to the orchestrator.
+- --mode single runs the same task through run_agent alone, for comparison.
+- REVIEW_POLICY makes both modes read-only (no catalog changes, flags, progress, or alerts).
+- context_stats() reads the trace to report model calls, number of agents, and the largest
+  single prompt. "Largest single prompt" is the context-size measure the lesson is about.
+
+Teach both directions:
+- Independent pieces (one review per day): splitting keeps each context small.
+- Tightly coupled pieces (following events across days): splitting multiplies tokens and calls,
+  and one subagent still ends up holding the cross-day data.
+
+
+ASSUMPTIONS
+
+- Data /workspace/data/usgs. Model gpt-6-luna, reasoning_effort "none".
+- The single agent uses the monitor's system prompt and skills, which push it toward daily
+  triage. In review mode those tools are denied, so the single agent sometimes spends 1 to 3
+  calls on denied tools. That noise is visible in the small-question runs below.
+
+
+EXPECTED RESULT
+
+Must demonstrate (1): splitting into subagents reduces context size.
+
+  cd solution-files
+  python orchestrator.py --data-dir /workspace/data/usgs --mode single --task "Write a weekly review of the feed for 2026-06-08 through 2026-06-14. For each day give the row count, the largest event (id, magnitude, place, status), and anything unusual in statuses or event types. End with the three most notable events of the week."
+  (same with --mode orchestrated)
+
+Measured 2026-10-09, two runs each:
+
+| Mode | Total tokens | Model calls | Agents | Largest single prompt |
+|---|---|---|---|---|
+| single | 79,413 / 43,112 | 14 / 9 | 1 | 6,984 / 6,955 |
+| orchestrated | 75,596 / 70,948 | 50 / 47 | 8 | 2,324 / 2,172 |
+
+The largest prompt drops about 3x. Total tokens are similar or higher: the saving is context
+size, not cost.
+
+Must demonstrate (2): a case where a single agent is the better choice.
+
+  python orchestrator.py --data-dir /workspace/data/usgs --mode single --task "Consider events that appeared in the feed on 2026-06-07 with status automatic. How many of them were published again as reviewed in the feeds of 2026-06-08 through 2026-06-12? How many of those changed magnitude by 0.3 or more (absolute)? Which event changed the most, and by how much?"
+  (same with --mode orchestrated)
+
+Measured 2026-10-09 (final code):
+
+| Mode | Answer | Total tokens | Model calls | Largest single prompt |
+|---|---|---|---|---|
+| single | 49 revised, 10 changed >= 0.3, aka2026lfhdkl +0.4 | 18,035 | 5 | 6,493 |
+| orchestrated | 49, 10, aka2026lfhdkl +0.4 | 93,202 | 24 | 11,611 |
+
+Same answer, 5x the tokens, and a bigger largest prompt, because one subagent still had to hold
+the cross-day data. Ground truth computed directly from the files: 49 revised, 11 with a change
+of at least 0.30 when changes are rounded to 2 decimals, largest aka2026lfhdkl 2.0 -> 2.4.
+Both agents said 10: one change sits exactly at 0.30 and compares below it in floating point.
+That boundary is a nice aside on checking agent answers.
+
+A small single-day question ("How many rows on 2026-06-08 and the largest event?") is NOT a good
+single-agent demo: measured 10,910 vs 11,851 tokens in one run and 8,615 vs 7,741 in another,
+because the single agent wasted calls on denied triage tools. Use the cross-day task.

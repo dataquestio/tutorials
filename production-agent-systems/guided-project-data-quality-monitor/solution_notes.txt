@@ -1,0 +1,78 @@
+C2 GP DATA QUALITY MONITOR: AUTHORING NOTES
+Delete before shipping the lesson.
+
+DATA: learner dataset usgs_gp (day CSV files plus planted_issues.jsonl). The
+planted issues, the real issues in the answer key, the frozen raw API pull, and
+the build script are in ../data-build/usgs/ (README.md, build_usgs.py, raw/).
+Never copy them into the learner dataset. Remove ../data-build/ once the course is
+done.
+
+
+WHAT TO DO
+
+Guided project. The root is lesson 4's solution plus test_solution.py. Learners build the
+monitor themselves; solution-files/ holds the reference:
+
+- dq_monitor.py
+  - profile_day tool (registered into tools.TOOLS): file exists, row count vs trailing 7-day mean,
+    content hash vs previous day, column changes, depth median, out-of-range values (mag or a
+    renamed magnitude column, latitude, longitude), cross-network near duplicates (different net,
+    within 5 s and 0.1 degrees). Profiles are saved to state/profiles.jsonl.
+  - run_dq_day / run_dq_range: the lesson 1 outer loop with a data quality task and DQ_POLICY.
+  - score(flags, planted, days): matches flags to the answer key by kind and day, plus event id
+    for row-level issues. Returns recall, precision, missed ids, false positives, by_type.
+  - report(...): task completion, tool usage efficiency, safety checks, detection.
+- skills/data-quality-checks/SKILL.md: maps each profile signal to a flag kind.
+
+Brief learners on the contract test_solution.py relies on: Section 7 names, runner.run_day, and
+dq_monitor.score(flags, planted, days) returning planted_issues, issues_found, recall, precision.
+Flag kinds must be the answer key's `type` values.
+
+Run the monitor:
+
+  cd solution-files
+  python dq_monitor.py run --data-dir /workspace/data/usgs_gp --start 2026-06-01 --end 2026-08-31
+  python dq_monitor.py report --data-dir /workspace/data/usgs_gp   # report again without rerunning
+
+Check a solution (no key, no network, about 0.2 s):
+
+  python test_solution.py --data-dir /workspace/data/usgs_gp
+
+
+ASSUMPTIONS
+
+- Data /workspace/data/usgs_gp: 91 day files (2026-06-19 is missing on purpose) and
+  planted_issues.jsonl with 41 issues: 16 planted and 25 real issues already in the USGS data
+  (`source` field). Authoring details in ../data-build/usgs/README.md.
+- Model gpt-6-luna, reasoning_effort "none".
+- The reference uses local files only. The API server option from Section 10.4 is not built.
+
+
+EXPECTED RESULT
+
+Must demonstrate: reports task completion rate, tool usage efficiency, and safety checks against
+planted_issues.jsonl.
+
+Measured 2026-10-09, full window, one run:
+
+- Task completion: 92 of 92 days finished, completion rate 1.0.
+- Tool usage efficiency: 317 tool calls (3.45 per day), tool error rate 0.0, 4.25 model calls per
+  day, 6,372 tokens per day (about 586,000 tokens total, under $0.10 at gpt-6-luna prices).
+  Wall time about 35 minutes.
+- Safety checks: 0 denied calls, 0 denied calls that ran, 0 alerts sent without approval,
+  0 approvals waiting, 0 occurrences of any *_API_KEY or *_TOKEN value in the trace.
+- Detection: 41 of 41 issues found, recall 1.0, precision 1.0, no false positives. By type:
+  cross_network_duplicate 11/11, out_of_range 23/23, missing_day 1/1, duplicate_day 1/1,
+  depth_unit_change 3/3, renamed_column 1/1, volume_drop 1/1.
+
+The perfect score comes from a profile tool that computes every signal and a skill that maps
+signals to kinds one to one; the model mostly relays. Learners whose tools leave more judgment to
+the model should expect lower recall. That gap is a good debrief topic.
+
+test_solution.py, measured 2026-10-09:
+- solution-files/ with OPENAI_API_KEY unset: 19 tests, OK.
+- Same with HTTPS_PROXY/HTTP_PROXY pointed at a dead port: 19 tests, OK.
+- GP root (no dq_monitor.py yet): 18 pass, 1 fails with "Answer key: dq_monitor.py with a
+  score(flags, planted, days) function is missing".
+- It found a real bug while being written: runner.run_day crashed if state/ did not exist. Fixed in
+  lesson 1's runner.py and every copy.

@@ -1,0 +1,81 @@
+C2 L1 THE OUTER LOOP: AUTHORING NOTES
+Delete before shipping the lesson.
+
+DATA: learner dataset usgs (day CSV files only). How the feed is simulated, the
+quirks, the frozen raw API pull, and the build script are in ../data-build/usgs/
+(README.md, build_usgs.py, raw/). Never copy them into the learner dataset. Remove
+../data-build/ once the course is done.
+
+
+WHAT TO DO
+
+The root is Course 2's own starter: every Section 7.1 file (agent.py, tools.py, tracing.py,
+memory.py, skills.py, permissions.py, run.py, skills/) written for this course, plus the feed
+tools in tools.py (day_summary, apply_day_to_catalog, flag_anomaly, append_progress, send_alert).
+A learner who finished Course 1 should recognize every name. Spend the first screens on a short
+tour of it (Section 10.2), then run run.py once on a single day.
+
+The lesson adds runner.py:
+
+- run_day(day, state_dir, config, client=None): fresh run_agent conversation per day, then
+  commits state.json (current_day, completed_days, tokens_used_total, pending_approvals).
+- Exit criteria in run_range: end day reached, total token budget, or an "error" stop.
+- Budgets: AgentConfig.max_tokens_total is per run (--max-tokens-per-day); --max-total-tokens
+  is across runs.
+- Unattended approvals: permissions.APPROVER is swapped for queue_for_human, so "ask" tools
+  (send_alert) land in pending_approvals instead of blocking on input().
+- Crash safety comes from two habits: state.json and catalog.jsonl are written to a temp file
+  and swapped in with os.replace, and apply_day_to_catalog is idempotent (a row whose
+  `updated` matches the stored version is skipped). A killed day is simply run again.
+
+Teaching points the measured run produced (worth a screen each):
+
+- The kill landed after day 5's agent finished but before state.json was committed (one
+  measured run left a half-written "[runner] 2026-06-05: stop=final" line in progress.md). The
+  restart repeated day 5. Because apply_day_to_catalog is idempotent, the repeated run reported
+  "0 new, 0 revised" for that day: correct for the catalog, misleading in progress.md. That is
+  the cost of committing once per day, and the motivation for lesson 2.
+- flags.jsonl and progress.md are append-only, so a repeated day can write its flags twice.
+
+
+ASSUMPTIONS
+
+- Data: /workspace/data/usgs (92 day files, 2026-06-01 to 2026-08-31). Pass the folder that
+  contains days/ as --data-dir; run.py links it into the workspace as data/.
+- Model gpt-6-luna, reasoning_effort "none". Key in .env.
+- Default AgentConfig.policy is agent.DEFAULT_POLICY: run_shell is "deny", send_alert is "ask",
+  everything else "allow". The doc's default is an empty dict (everything "ask"); Course 2
+  overrides it because an unattended run cannot ask.
+- 2026-06-07 has an automatic M7.58 (us7000srb1), which meets the alert policy, so day 7 is the
+  natural demo for a queued approval.
+
+
+EXPECTED RESULT
+
+Must demonstrate: kill the process mid-range, restart, and it resumes at the correct day with
+the catalog intact.
+
+  cd solution-files
+  timeout -s KILL 40 python -u runner.py --data-dir /workspace/data/usgs --start 2026-06-01 --end 2026-06-07
+  cat workspace/state/state.json
+  python -u runner.py --data-dir /workspace/data/usgs --start 2026-06-01 --end 2026-06-07
+
+Measured 2026-10-09 (final code):
+
+- Killed run: days 06-01 to 06-04 finished (12,908 / 9,390 / 20,633 / 10,919 tokens, 5 to 7
+  steps each). state.json after the kill: current_day 2026-06-05, 4 completed days.
+- Restart printed "Resuming at 2026-06-05 (4 days already done)" and finished 06-05, 06-06,
+  06-07. Final state: current_day 2026-06-08, 7 completed days, 96,758 tokens total.
+- Catalog check: rebuilding the catalog for 06-01 to 06-07 directly with apply_day_to_catalog
+  (no model) gives 2,670 events, identical to the resumed run's catalog.jsonl, every field.
+- Day 06-07 queued one approval: send_alert for us7000srb1 (M7.58, automatic). alerts.jsonl
+  stayed empty.
+- Cost: about 7,000 to 24,000 tokens per day, roughly $0.001 to $0.004 at gpt-6-luna prices.
+
+Starter smoke test (root, run.py on 2026-06-01, measured before largest_new_events was added to
+apply_day_to_catalog): 7 steps, 10,795 tokens, flagged the M6.2 us7000spxm, wrote
+state/catalog.jsonl, flags.jsonl, progress.md.
+
+runner.run_day creates state/ if it does not exist. That line was added after the measured runs
+above, when the GP tests showed run_day crashing if the agent never wrote to state/. It does not
+change behavior when state/ already exists.
