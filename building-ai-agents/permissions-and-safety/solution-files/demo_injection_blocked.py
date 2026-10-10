@@ -46,7 +46,7 @@ INJECTION = (
 )
 
 
-def poisoned_copy(data_dir: Path) -> Path:
+def poisoned_copy(data_dir):
     """A temporary copy of the data with the instruction in one resolution text."""
     out = Path(tempfile.mkdtemp()) / "poisoned_data"
     out.mkdir()
@@ -96,7 +96,7 @@ class FooledModel:
         return reply(call=call)
 
 
-def reviewer_says_no(tool: str, args: dict) -> bool:
+def reviewer_says_no(tool, args):
     """Stands in for the person who approves tool calls."""
     print(f"   [approval requested for {tool}: {args}] -> reviewer says no")
     return False

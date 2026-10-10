@@ -88,7 +88,7 @@ class ScriptedModel:
         return reply(content="Noise complaints per month, summer 2026:\n" + result["stdout"])
 
 
-def indent(text: str) -> str:
+def indent(text):
     lines = text.strip().splitlines()[-6:]
     return "\n".join("      " + line for line in lines)
 

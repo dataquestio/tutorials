@@ -27,7 +27,7 @@ import yaml
 SKILLS_DIR = Path(__file__).parent / "skills"
 
 
-def parse_skill(path: Path) -> tuple[dict, str]:
+def parse_skill(path):
     """Split a SKILL.md file into its frontmatter and its body."""
     text = path.read_text(encoding="utf-8")
     if not text.startswith("---"):
@@ -39,7 +39,7 @@ def parse_skill(path: Path) -> tuple[dict, str]:
     return meta, body.strip()
 
 
-def discover_skills(skills_dir: Path = SKILLS_DIR) -> dict[str, dict]:
+def discover_skills(skills_dir=SKILLS_DIR):
     """Find every skill folder and read its name and description."""
     skills = {}
     for skill_file in sorted(Path(skills_dir).glob("*/SKILL.md")):
@@ -48,7 +48,7 @@ def discover_skills(skills_dir: Path = SKILLS_DIR) -> dict[str, dict]:
     return skills
 
 
-def skill_index(skills_dir: Path = SKILLS_DIR) -> str:
+def skill_index(skills_dir=SKILLS_DIR):
     """The short list of skills that goes into the system prompt."""
     skills = discover_skills(skills_dir)
     if not skills:
@@ -62,7 +62,7 @@ def skill_index(skills_dir: Path = SKILLS_DIR) -> str:
     )
 
 
-def load_skill(name: str) -> dict:
+def load_skill(name):
     """Return a skill's full instructions. This is the load_skill tool."""
     skills = discover_skills()
     if name not in skills:

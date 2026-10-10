@@ -13,17 +13,17 @@ RESULT_PREVIEW_CHARS = 500
 
 
 def write_event(
-    trace_path: Path,
-    run_id: str,
-    step: int,
-    type: str,
-    tool: str | None = None,
-    args: dict | None = None,
-    result: dict | None = None,
-    input_tokens: int | None = None,
-    output_tokens: int | None = None,
-    duration_ms: int = 0,
-) -> None:
+    trace_path,
+    run_id,
+    step,
+    type,
+    tool=None,
+    args=None,
+    result=None,
+    input_tokens=None,
+    output_tokens=None,
+    duration_ms=0,
+):
     """Append one event to the trace file.
 
     type is one of: model_call, tool_call, tool_result, final, stop, error.

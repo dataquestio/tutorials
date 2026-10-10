@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from agent import AgentConfig, run_agent
 
 
-def prepare_workspace(workspace: Path, data_dir: Path) -> None:
+def prepare_workspace(workspace, data_dir):
     """Create the workspace and link the data into it as data/."""
     workspace.mkdir(parents=True, exist_ok=True)
     link = workspace / "data"

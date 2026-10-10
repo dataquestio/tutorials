@@ -20,11 +20,11 @@ Usage:
 """
 
 import argparse
+import copy
 import json
 import os
 import time
 import uuid
-from dataclasses import replace
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -61,11 +61,13 @@ REVIEW_POLICY = {
 }
 
 
-def run_orchestrator(task: str, config: AgentConfig, client=None, subagent_max_steps: int = 8) -> AgentResult:
+def run_orchestrator(task, config, client=None, subagent_max_steps=8):
     """Run the orchestrator loop. Subagents share the trace file and token totals."""
     client = client or OpenAI()
     run_id = uuid.uuid4().hex[:12]
-    sub_config = replace(config, max_steps=subagent_max_steps)
+    # Subagents get the same settings with a smaller step limit.
+    sub_config = copy.copy(config)
+    sub_config.max_steps = subagent_max_steps
     extra = {"tools": [DELEGATE_SCHEMA]}
     if config.reasoning_effort is not None:
         extra["reasoning_effort"] = config.reasoning_effort
@@ -109,7 +111,7 @@ def run_orchestrator(task: str, config: AgentConfig, client=None, subagent_max_s
                        input_tokens=input_tokens, output_tokens=output_tokens, files_written=[])
 
 
-def context_stats(trace_path: Path, start_line: int) -> dict:
+def context_stats(trace_path, start_line):
     """Largest single prompt, and model calls, for trace events written after start_line."""
     with open(trace_path, encoding="utf-8") as f:
         events = [json.loads(line) for line in f][start_line:]
@@ -121,7 +123,7 @@ def context_stats(trace_path: Path, start_line: int) -> dict:
             "largest_prompt_tokens": max(per_agent.values(), default=0)}
 
 
-def count_lines(path: Path) -> int:
+def count_lines(path):
     if not Path(path).exists():
         return 0
     with open(path, encoding="utf-8") as f:

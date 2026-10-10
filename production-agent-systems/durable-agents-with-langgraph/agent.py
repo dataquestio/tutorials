@@ -9,8 +9,6 @@ import json
 import os
 import time
 import uuid
-from dataclasses import dataclass, field
-from pathlib import Path
 
 from openai import OpenAI
 
@@ -48,31 +46,41 @@ DEFAULT_POLICY = {
 }
 
 
-@dataclass
 class AgentConfig:
-    model: str
-    workspace: Path
-    trace_path: Path
-    max_steps: int = 20
-    max_tokens_total: int = 200_000
-    # gpt-6-luna only accepts tools on Chat Completions with reasoning off.
-    # Set to None for providers that don't accept this parameter.
-    reasoning_effort: str | None = "none"
-    compact_at_tokens: int = 60_000
-    policy: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_POLICY))
+    def __init__(
+        self,
+        model,
+        workspace,
+        trace_path,
+        max_steps=20,
+        max_tokens_total=200_000,
+        reasoning_effort="none",
+        compact_at_tokens=60_000,
+        policy=None,
+    ):
+        self.model = model
+        self.workspace = workspace
+        self.trace_path = trace_path
+        self.max_steps = max_steps
+        self.max_tokens_total = max_tokens_total
+        # gpt-6-luna only accepts tools on Chat Completions with reasoning off.
+        # Set to None for providers that don't accept this parameter.
+        self.reasoning_effort = reasoning_effort
+        self.compact_at_tokens = compact_at_tokens
+        self.policy = policy if policy is not None else dict(DEFAULT_POLICY)
 
 
-@dataclass
 class AgentResult:
-    answer: str | None
-    stop_reason: str  # "final", "max_steps", "budget", or "error"
-    steps: int
-    input_tokens: int
-    output_tokens: int
-    files_written: list[str]
+    def __init__(self, answer, stop_reason, steps, input_tokens, output_tokens, files_written):
+        self.answer = answer
+        self.stop_reason = stop_reason  # "final", "max_steps", "budget", or "error"
+        self.steps = steps
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+        self.files_written = files_written
 
 
-def workspace_files(workspace: Path) -> set[str]:
+def workspace_files(workspace):
     """All files in the workspace, without following the data/ link."""
     found = set()
     for folder, _, names in os.walk(workspace):
@@ -81,7 +89,7 @@ def workspace_files(workspace: Path) -> set[str]:
     return found
 
 
-def run_agent(task: str, config: AgentConfig, client=None) -> AgentResult:
+def run_agent(task, config, client=None):
     """Work on one task with a fresh conversation until done or out of budget."""
     client = client or OpenAI()
     tools.WORKSPACE = config.workspace

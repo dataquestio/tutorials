@@ -34,7 +34,7 @@ PROGRESS_FILE = "state/progress.md"
 ALERTS_FILE = "state/alerts.jsonl"
 
 
-def resolve_in_workspace(path: str) -> Path:
+def resolve_in_workspace(path):
     """Turn a path from the model into a path inside the workspace.
 
     The path is normalized (so "a/../.." collapses) but symlinks are not
@@ -52,7 +52,7 @@ def resolve_in_workspace(path: str) -> Path:
 # General tools
 # ---------------------------------------------------------------------------
 
-def list_files(path: str = ".") -> dict:
+def list_files(path="."):
     """List the files and folders in a workspace directory."""
     try:
         folder = resolve_in_workspace(path)
@@ -67,7 +67,7 @@ def list_files(path: str = ".") -> dict:
         return {"error": str(e)}
 
 
-def read_file(path: str, start_line: int = 1, max_lines: int = 50) -> dict:
+def read_file(path, start_line=1, max_lines=50):
     """Read a slice of lines from a text file."""
     try:
         lines = []
@@ -83,7 +83,7 @@ def read_file(path: str, start_line: int = 1, max_lines: int = 50) -> dict:
         return {"error": str(e)}
 
 
-def write_file(path: str, content: str) -> dict:
+def write_file(path, content):
     """Create or overwrite a text file in the workspace."""
     try:
         target = resolve_in_workspace(path)
@@ -94,12 +94,12 @@ def write_file(path: str, content: str) -> dict:
         return {"error": str(e)}
 
 
-def safe_env() -> dict:
+def safe_env():
     """The environment for commands the agent runs, without any secrets."""
     return {k: v for k, v in os.environ.items() if not k.endswith(("_API_KEY", "_TOKEN"))}
 
 
-def run_command(command, shell: bool) -> dict:
+def run_command(command, shell):
     try:
         completed = subprocess.run(
             command, shell=shell, cwd=WORKSPACE, env=safe_env(),
@@ -112,12 +112,12 @@ def run_command(command, shell: bool) -> dict:
         return {"error": str(e)}
 
 
-def run_python(code: str) -> dict:
+def run_python(code):
     """Run a Python script in the workspace. Only printed output comes back."""
     return run_command([sys.executable, "-c", code], shell=False)
 
 
-def run_shell(command: str) -> dict:
+def run_shell(command):
     """Run a shell command in the workspace."""
     return run_command(command, shell=True)
 
@@ -126,7 +126,7 @@ def run_shell(command: str) -> dict:
 # Feed tools
 # ---------------------------------------------------------------------------
 
-def read_day_rows(day: str) -> list[dict]:
+def read_day_rows(day):
     with open(resolve_in_workspace(f"data/days/{day}.csv"), newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
@@ -138,7 +138,7 @@ def to_float(value):
         return None
 
 
-def day_summary(day: str) -> dict:
+def day_summary(day):
     """Summarize one day of the feed without loading it into the conversation."""
     try:
         rows = read_day_rows(day)
@@ -169,7 +169,7 @@ def day_summary(day: str) -> dict:
     }
 
 
-def load_catalog() -> dict:
+def load_catalog():
     path = resolve_in_workspace(CATALOG_FILE)
     if not path.exists():
         return {}
@@ -177,7 +177,7 @@ def load_catalog() -> dict:
         return {event["id"]: event for event in map(json.loads, f)}
 
 
-def save_catalog(catalog: dict) -> None:
+def save_catalog(catalog):
     """Write the whole catalog to a temporary file, then swap it in.
 
     A crash can never leave a half-written catalog behind: the old file
@@ -192,7 +192,7 @@ def save_catalog(catalog: dict) -> None:
     os.replace(tmp, path)
 
 
-def apply_day_to_catalog(day: str) -> dict:
+def apply_day_to_catalog(day):
     """Merge one day of the feed into the running catalog.
 
     New ids are added, rows for known ids replace the stored version, and
@@ -266,14 +266,14 @@ def apply_day_to_catalog(day: str) -> dict:
     }
 
 
-def append_jsonl(relative_path: str, record: dict) -> None:
+def append_jsonl(relative_path, record):
     path = resolve_in_workspace(relative_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
 
 
-def flag_anomaly(day: str, kind: str, details: str, event_ids: list[str] | None = None) -> dict:
+def flag_anomaly(day, kind, details, event_ids=None):
     """Record something unusual for a human to look at later."""
     try:
         record = {"day": day, "kind": kind, "details": details, "event_ids": event_ids or []}
@@ -283,7 +283,7 @@ def flag_anomaly(day: str, kind: str, details: str, event_ids: list[str] | None 
         return {"error": str(e)}
 
 
-def append_progress(text: str) -> dict:
+def append_progress(text):
     """Add a note to the progress log that the next run will read."""
     try:
         path = resolve_in_workspace(PROGRESS_FILE)
@@ -295,7 +295,7 @@ def append_progress(text: str) -> dict:
         return {"error": str(e)}
 
 
-def send_alert(message: str, event_ids: list[str] | None = None) -> dict:
+def send_alert(message, event_ids=None):
     """Send an alert to the people on call. Needs human approval by default."""
     try:
         append_jsonl(ALERTS_FILE, {"message": message, "event_ids": event_ids or []})
@@ -308,7 +308,7 @@ def send_alert(message: str, event_ids: list[str] | None = None) -> dict:
 # Registry
 # ---------------------------------------------------------------------------
 
-def tool(fn, description: str, properties: dict, required: list[str]) -> dict:
+def tool(fn, description, properties, required):
     """Pair a function with the schema the model sees."""
     return {
         "schema": {
@@ -356,12 +356,12 @@ TOOLS = {
 }
 
 
-def tool_schemas() -> list[dict]:
+def tool_schemas():
     """The tool definitions to send with every model call."""
     return [t["schema"] for t in TOOLS.values()]
 
 
-def call_tool(name: str, arguments: dict) -> dict:
+def call_tool(name, arguments):
     """Run a tool by name. Unknown tools and bad arguments come back as errors."""
     if name not in TOOLS:
         return {"error": f"Unknown tool: {name}"}
@@ -371,7 +371,7 @@ def call_tool(name: str, arguments: dict) -> dict:
         return {"error": f"Invalid arguments for {name}: {e}"}
 
 
-def format_result(result: dict) -> str:
+def format_result(result):
     """Serialize a tool result for the model, cut to a fixed size."""
     text = json.dumps(result)
     if len(text) > MAX_TOOL_OUTPUT_CHARS:

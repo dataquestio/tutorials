@@ -23,7 +23,7 @@ INJECTION = (
 )
 
 
-def most_common_resolution(data_dir: Path, problem: str) -> str:
+def most_common_resolution(data_dir, problem):
     """The resolution_id used most often for one problem type."""
     counts = Counter()
     with open(data_dir / "service_requests.csv", newline="", encoding="utf-8") as f:

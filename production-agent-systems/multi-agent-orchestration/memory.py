@@ -18,7 +18,7 @@ SUMMARY_PROMPT = (
 )
 
 
-def split_point(messages: list) -> int:
+def split_point(messages):
     """Index where the recent messages start.
 
     The cut lands on an assistant message, so a tool result is never kept
@@ -34,7 +34,7 @@ def split_point(messages: list) -> int:
     return len(messages)
 
 
-def maybe_compact(messages: list, last_prompt_tokens: int, threshold: int, client, model: str, request_extra: dict):
+def maybe_compact(messages, last_prompt_tokens, threshold, client, model, request_extra):
     """Compact messages if the last request was over the threshold.
 
     Returns (messages, usage). usage is None when nothing was compacted.

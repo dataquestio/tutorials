@@ -11,8 +11,6 @@ import json
 import os
 import time
 import uuid
-from dataclasses import dataclass, field
-from pathlib import Path
 
 from openai import OpenAI
 
@@ -47,7 +45,7 @@ Some tools need a person's approval, and some are blocked. If a tool call comes 
 """
 
 
-def build_system_prompt(workspace: Path) -> str:
+def build_system_prompt(workspace):
     """The system prompt, the skill list, and notes from earlier runs if there are any."""
     prompt = SYSTEM_PROMPT + skills.skill_index()
     notes = memory.load_notes(workspace)
@@ -56,33 +54,43 @@ def build_system_prompt(workspace: Path) -> str:
     return prompt
 
 
-@dataclass
 class AgentConfig:
-    model: str
-    workspace: Path
-    trace_path: Path
-    max_steps: int = 20
-    max_tokens_total: int = 200_000
-    # gpt-6-luna only accepts tools on Chat Completions with reasoning off.
-    # Set to None for providers that don't accept this parameter.
-    reasoning_effort: str | None = "none"
-    # Compact the conversation once a model call's input passes this size.
-    compact_at_tokens: int = 60_000
-    # Tool name -> "allow", "ask", or "deny". Missing tools are "ask".
-    policy: dict[str, str] = field(default_factory=lambda: dict(permissions.DEFAULT_POLICY))
+    def __init__(
+        self,
+        model,
+        workspace,
+        trace_path,
+        max_steps=20,
+        max_tokens_total=200_000,
+        reasoning_effort="none",
+        compact_at_tokens=60_000,
+        policy=None,
+    ):
+        self.model = model
+        self.workspace = workspace
+        self.trace_path = trace_path
+        self.max_steps = max_steps
+        self.max_tokens_total = max_tokens_total
+        # gpt-6-luna only accepts tools on Chat Completions with reasoning off.
+        # Set to None for providers that don't accept this parameter.
+        self.reasoning_effort = reasoning_effort
+        # Compact the conversation once a model call's input passes this size.
+        self.compact_at_tokens = compact_at_tokens
+        # Tool name -> "allow", "ask", or "deny". Missing tools are "ask".
+        self.policy = policy if policy is not None else dict(permissions.DEFAULT_POLICY)
 
 
-@dataclass
 class AgentResult:
-    answer: str | None
-    stop_reason: str  # "final", "max_steps", "budget", or "error"
-    steps: int
-    input_tokens: int
-    output_tokens: int
-    files_written: list[str]
+    def __init__(self, answer, stop_reason, steps, input_tokens, output_tokens, files_written):
+        self.answer = answer
+        self.stop_reason = stop_reason  # "final", "max_steps", "budget", or "error"
+        self.steps = steps
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+        self.files_written = files_written
 
 
-def workspace_files(workspace: Path) -> set[str]:
+def workspace_files(workspace):
     """All files in the workspace, without following the data/ link."""
     found = set()
     for folder, _, names in os.walk(workspace):
@@ -91,7 +99,7 @@ def workspace_files(workspace: Path) -> set[str]:
     return found
 
 
-def run_agent(task: str, config: AgentConfig, client=None) -> AgentResult:
+def run_agent(task, config, client=None):
     """Work on a task until the model answers or a limit is reached."""
     client = client or OpenAI()
     tools.WORKSPACE = config.workspace
