@@ -1,0 +1,5 @@
+How many restaurants are in the data, and how many have never been inspected?
+Among cuisines with at least 300 restaurants, which five have the highest share of inspections with at least one critical violation?
+For each borough, what share of restaurants have an A as their most recent final grade? Use only A, B, and C grades and ignore pending ones.
+In cycle inspections, how does the average score of initial inspections compare with re-inspections?
+What were the five most cited violation codes in 2025, and what do they describe?

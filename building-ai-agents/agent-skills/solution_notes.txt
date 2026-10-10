@@ -1,0 +1,44 @@
+LESSON 3 AUTHORING NOTES: Agent skills
+Delete before shipping the lesson.
+
+DATA: learner dataset nyc311 (CSV files only). Columns, source mapping, quirks, and
+the build script are in ../data-build/nyc311/ (README.md, build_nyc311.py). Never
+copy them into the learner dataset. Remove ../data-build/ once the course is done.
+
+
+WHAT TO DO
+
+Add skills.py (discover, index, load_skill), register load_skill in tools.py,
+add the index to the system prompt, and trace a skill_load event. Author two
+skills under skills/: year-over-year-comparison and borough-comparison.
+requirements.txt gains pyyaml==6.0.3.
+
+Worth a screen: the first version of the skill descriptions made the agent
+load year-over-year-comparison for a single-year channel count. Two changes
+fixed it: descriptions that say when NOT to use the skill ("Use only when ...
+Not for questions about a single year") and an index line saying many tasks
+need no skill. Description wording is the main lever on when skills load.
+
+Commands (run from solution-files/):
+  python run.py --data-dir <nyc311> --question "Compare rodent complaints in summer 2026 with summer 2025 for each borough. Which borough had the biggest percentage increase?"
+  python run.py --data-dir <nyc311> --question "How many requests in summer 2026 came in by each channel?"
+  Check the trace for "skill_load" events.
+
+
+ASSUMPTIONS
+
+- Skills live next to the code in skills/, not in the workspace. They hold
+  instructions only, no scripts.
+- Skills follow the agentskills.io format: SKILL.md with name and description
+  frontmatter.
+
+
+EXPECTED RESULT (measured 2026-10-09, after the description fix)
+
+- Rodent 2025 vs 2026: loads year-over-year-comparison only. Answer Queens
+  +3.2%, with a per-borough table.
+- Noise closing time by borough: loads borough-comparison only. Bronx 1.74 h,
+  table with counts per borough, 95 rows without closed_date excluded.
+- Channel counts for summer 2026: no skill. Online 491,270, Phone 226,842,
+  Mobile 197,758, Unknown 89,157, Other 1,804 (total 1,006,831).
+- Top 5 problem types in July 2026: no skill.

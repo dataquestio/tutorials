@@ -1,0 +1,76 @@
+C2 L2 DURABLE AGENTS WITH LANGGRAPH: AUTHORING NOTES
+Delete before shipping the lesson.
+
+DATA: learner dataset usgs (day CSV files only). How the feed is simulated, the
+quirks, the frozen raw API pull, and the build script are in ../data-build/usgs/
+(README.md, build_usgs.py, raw/). Never copy them into the learner dataset. Remove
+../data-build/ once the course is done.
+
+
+WHAT TO DO
+
+The lesson adds graph_agent.py: the same monitor as a LangGraph StateGraph with a SQLite
+checkpointer (langgraph 1.2.12, langgraph-checkpoint-sqlite 3.1.1; added to requirements.txt in
+this lesson). No langchain imports: messages are stored as plain Chat Completions dicts.
+
+- Nodes: model -> approval -> tools -> model, END when the model answers without tools, or on
+  max_steps / max_tokens_total.
+- approval uses interrupt() for "ask" tools. Teach why tools run in a separate node: on resume
+  LangGraph reruns the interrupted node from the top, so nothing before interrupt() may have
+  side effects.
+- One thread per day (thread_id "day-YYYY-MM-DD"). A paused day goes into pending_approvals with
+  its thread_id and the run moves on; `approve --day D --decision yes|no` resumes that thread.
+- The file-based state.json from lesson 1 is reused for the day-level bookkeeping; the
+  checkpointer handles mid-day progress.
+
+Side-by-side for the comparison screen:
+
+| | File-based runner (L1) | LangGraph (L2) |
+|---|---|---|
+| Unit of recovery | Whole day | Last finished node |
+| After a mid-day kill | Day reruns from scratch; tools must be idempotent | Continues before the next node |
+| Human approval | Queued, not executed; needs a separate replay to act on it | Thread pauses; approve resumes it and the tool runs |
+| Extra pieces | None (json + os.replace) | langgraph, sqlite file, plain-dict message state |
+| What you write yourself | Commit logic, idempotent tools | Graph wiring, interrupt rules |
+
+
+ASSUMPTIONS
+
+- Data /workspace/data/usgs. Model gpt-6-luna, reasoning_effort "none".
+- Compaction (memory.py) is deliberately not wired into the graph.
+  Every simulated day starts with a fresh context and days run at about 6k to 16k tokens,
+  far below compact_at_tokens. Adding it would need extra graph state and a summary node,
+  which pulls the lesson away from checkpoints and resume. Compaction is taught in Course 1
+  lesson 2 and lives in this course's agent.py. The lesson should say in one line that
+  reusing graph_agent.py for long single-day tasks means adding compaction.
+- More than one "ask" call in a single model turn is handled: each resume answers one
+  interrupt, and approve_command re-queues the next one (see EXPECTED RESULT).
+
+
+EXPECTED RESULT
+
+Must demonstrate: the same resume demo using checkpoints, plus the side-by-side above.
+
+  cd solution-files
+  timeout -s KILL 22 python -u graph_agent.py run --data-dir /workspace/data/usgs --start 2026-06-05 --end 2026-06-07
+  python -u graph_agent.py run --data-dir /workspace/data/usgs --start 2026-06-05 --end 2026-06-07
+  python -u graph_agent.py approve --data-dir /workspace/data/usgs --day 2026-06-07 --decision yes
+
+Measured 2026-10-09 (two runs):
+
+- Run A: killed during 06-07 after 3 graph steps (4,237 tokens saved in 11 checkpoints).
+  Restart printed "2026-06-07: resuming from checkpoint before node ('model',)", did not repeat
+  those 3 steps, then paused on send_alert for us7000srb1. state.json showed the request in
+  pending_approvals with thread_id day-2026-06-07. approve --decision yes resumed the thread,
+  wrote alerts.jsonl, and finished the day.
+- Run B (final code): killed during 06-07 after 1 step (869 tokens). Same resume, pause,
+  approve sequence; final state: 3 completed days, 37,461 tokens, 0 pending approvals.
+- Both runs: catalog for 06-05 to 06-07 identical to a direct rebuild (1,239 events).
+- Compare with lesson 1, where the killed day's whole run (about 10,000 to 16,000 tokens) was
+  repeated.
+
+Two approvals in one model turn (verified with a scripted model, no API key): the model asks
+for two send_alert calls at once. approval_node interrupts on the first; after "approve
+--decision yes" the node reruns, the first interrupt() returns the answer, and the second
+pauses the day again. approve_command re-queues that new request: after approve 1,
+pending=[quake B]; after approve 2, the day is completed and pending=[].

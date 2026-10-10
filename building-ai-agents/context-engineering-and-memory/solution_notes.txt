@@ -1,0 +1,60 @@
+LESSON 2 AUTHORING NOTES: Context engineering and memory
+Delete before shipping the lesson.
+
+DATA: learner dataset nyc311 (CSV files only). Columns, source mapping, quirks, and
+the build script are in ../data-build/nyc311/ (README.md, build_nyc311.py). Never
+copy them into the learner dataset. Remove ../data-build/ once the course is done.
+
+
+WHAT TO DO
+
+Add memory.py and wire it into agent.py:
+- truncate(): every tool result is cut to MAX_TOOL_OUTPUT_CHARS (4,000) with a
+  note telling the model to print less.
+- NOTES.md: the prompt tells the agent to keep notes; build_system_prompt()
+  injects existing notes at the start of every run.
+- compact(): when a call's input passes compact_at_tokens, older messages are
+  replaced with a model-written summary. The split never separates a tool
+  result from the assistant message that asked for it.
+- run.py gains --max-tokens and --compact-at.
+
+Commands (run from solution-files/):
+  Long task, compaction forced low so it triggers:
+    python run.py --data-dir <nyc311> --max-steps 30 --compact-at 4000 --question "Build a summer 2026 report. For each of the five boroughs: the top 3 problem types by count, the median hours to close for each of those, and the share still open. Then compare total summer 2026 volume per borough with summer 2025 and summer 2024. Write the report to report.md."
+  Notes across runs: run any question twice with the same --workspace.
+
+
+ASSUMPTIONS
+
+- gpt-6-luna keeps its context small on its own. Per-call input on the long
+  report task never passed ~7k tokens, so the 60k default never triggers in
+  normal use. The lesson has to lower --compact-at to show compaction.
+- The spec's "a run that would exceed the context budget without compaction
+  completes with it" could not be shown naturally for the same reason (see
+  expected result). The demonstration is compaction triggering and the run
+  still finishing correctly.
+- Prose should say why the threshold is lowered: current models have very large
+  context windows and stay compact on small tasks, so compaction only shows up
+  at learning scale with a low --compact-at. In production, with long runs and
+  large tool outputs, it triggers on its own. The demo is still the real model;
+  only the threshold changes.
+
+
+EXPECTED RESULT (measured 2026-10-09)
+
+Long report task:
+- No compaction (--compact-at 10000000): final, 15 steps, 52k in / 2.9k out.
+  Per-call input grew 719 -> 6,766 tokens.
+- --compact-at 12000: never triggered; final, 12 steps, 38k in.
+- --compact-at 4000: one compaction after step 10 (input 4,634 -> 3,350 on the
+  next call), run still finished: final, 12 steps, 31k in / 3.3k out, wrote
+  report.md and NOTES.md.
+
+Notes across runs, question "Which agency had the highest share of summer 2026
+requests still open?":
+- Fresh workspace: 7 steps, 10.5k input tokens.
+- Workspace with NOTES.md from an earlier run: 4 steps, 7.2k input tokens.
+
+A real error and recovery appeared here: AttributeError "'DataFrame' object has
+no attribute 'borough'" (a column not loaded with usecols), fixed on the next
+step.

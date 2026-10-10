@@ -1,0 +1,73 @@
+LESSON 1 AUTHORING NOTES: From tool loop to agent
+Delete before shipping the lesson.
+
+DATA: learner dataset nyc311 (CSV files only). Columns, source mapping, quirks, and
+the build script are in ../data-build/nyc311/ (README.md, build_nyc311.py). Never
+copy them into the learner dataset. Remove ../data-build/ once the course is done.
+
+
+WHAT TO DO
+
+Start from demo_tool_loop.py: the lesson 1046 loop with one hand-written tool
+(count_requests_by_borough). Show it answering the question its tool was built
+for, then fail on anything else (e.g. median closing time by borough).
+
+Then build solution-files/: general tools (tools.py), the loop with explicit
+stop reasons and token accounting (agent.py), the JSONL trace (tracing.py), and
+the CLI (run.py). The system prompt's "How to work" steps are where
+verification lives: explore, analyze with printed summaries, fix errors, check
+plausibility, answer with what was checked.
+
+Commands (run from solution-files/):
+  python run.py --data-dir <nyc311> --question "Which borough's residential noise complaints took longest to close, by median hours, in summer 2026?"
+  python run.py --data-dir <nyc311> --question "Make a chart of daily fireworks complaints from June 15 to July 15, 2026 and save it as fireworks.png. On which day did they peak?"
+
+
+ASSUMPTIONS
+
+- Model gpt-6-luna on Chat Completions with reasoning_effort="none". With
+  reasoning on, the API rejects tools (HTTP 400).
+- The nyc311 dataset folder holds only the three CSV files. No README: the
+  agent has to discover formats itself.
+- run.py links the data folder into the workspace as data/. File tools check
+  containment without resolving symlinks, so data/ works and ../ doesn't.
+- No truncation yet. read_file returns at most max_lines (default 50) lines, and
+  the prompt tells the model to print summaries. Truncation is lesson 2.
+- Subprocesses still see OPENAI_API_KEY. Stripping it is lesson 4.
+
+
+EXPECTED RESULT (measured 2026-10-08/09)
+
+demo_tool_loop.py, residential noise by borough: Brooklyn 30,071, Queens
+24,482, Bronx 23,204, Manhattan 13,273, Staten Island 3,598, Unspecified 4.
+
+run.py, verified against independent pandas code:
+- Noise closing time: Bronx, median 1.74 h (5-6 steps, ~10.5k input tokens).
+  Unspecified borough has 1.99 h; the agent excludes it and says so.
+- Rodent summer 2025 vs 2026: Queens +3.2% (1,966 -> 2,029), the only borough
+  that rose (6 steps, ~15k tokens). Uses daily_counts.csv.
+- Fireworks: peak July 4, 2026 with 2,257 complaints; writes fireworks.png
+  (5 steps, ~9.7k tokens).
+Cost per question is a fraction of a cent.
+
+Traceback recovery: the live model almost never fails here. 0 failed code runs
+in 13 lesson 1 runs, including a 14-step report task. A misleading hint in the
+question ("complaint_type", "created_at" in ISO format) caused a failure in only
+1 of 3 runs, because the model checks the real columns first.
+
+So recovery is shown with solution-files/demo_recovery.py: the model's turns are
+scripted, the tools run for real on the data, no API key needed. Prose should
+say why: current models handle small, clean tasks well, so failures are hard to
+show at learning scale, but they are routine in production (bigger codebases,
+messier data, longer runs).
+
+  python demo_recovery.py --data-dir <nyc311>
+
+Expected output (verified 2026-10-10): step 1 run_python fails with
+"ValueError: Usecols do not match columns, columns expected but not found:
+['complaint_type', 'created_at']"; step 2 read_file shows the real header;
+step 3 succeeds; final after 4 steps with noise complaints per month:
+2026-06 76,637; 2026-07 70,409; 2026-08 70,404.
+
+demo_recovery.py lives in solution-files/ because it needs the finished agent.
+Like root demo_*.py scripts, it is not carried into lesson 2.
