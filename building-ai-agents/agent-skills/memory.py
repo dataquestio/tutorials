@@ -26,7 +26,7 @@ SUMMARY_PROMPT = """Summarize the agent's work so far for its own future use. In
 Be specific and brief. Use bullet points."""
 
 
-def truncate(text: str, limit: int = MAX_TOOL_OUTPUT_CHARS) -> str:
+def truncate(text, limit=MAX_TOOL_OUTPUT_CHARS):
     """Cut a tool result down to the limit and say how much was cut."""
     if len(text) <= limit:
         return text
@@ -34,7 +34,7 @@ def truncate(text: str, limit: int = MAX_TOOL_OUTPUT_CHARS) -> str:
     return text[:limit] + f"\n[truncated {cut} characters. Print less, e.g. a summary or the first rows.]"
 
 
-def load_notes(workspace: Path) -> str | None:
+def load_notes(workspace):
     """Read NOTES.md from the workspace, if the agent has written one."""
     path = Path(workspace) / NOTES_FILE
     if path.exists():
@@ -42,14 +42,14 @@ def load_notes(workspace: Path) -> str | None:
     return None
 
 
-def as_dict(message) -> dict:
+def as_dict(message):
     """Messages are dicts or SDK message objects. Treat them all as dicts."""
     if isinstance(message, dict):
         return message
     return message.model_dump(exclude_none=True)
 
 
-def render(messages: list) -> str:
+def render(messages):
     """Turn messages into plain text so the model can summarize them."""
     lines = []
     for message in map(as_dict, messages):
@@ -60,7 +60,7 @@ def render(messages: list) -> str:
     return "\n".join(lines)
 
 
-def split_point(messages: list) -> int:
+def split_point(messages):
     """Index where the recent messages start.
 
     A tool result must stay right after the assistant message that asked
@@ -72,7 +72,7 @@ def split_point(messages: list) -> int:
     return index
 
 
-def compact(messages: list, client, model: str, reasoning_effort: str | None) -> tuple[list, dict]:
+def compact(messages, client, model, reasoning_effort):
     """Replace older messages with a summary.
 
     messages[0] is the system prompt and messages[1] is the task. Both stay.
@@ -103,6 +103,6 @@ def compact(messages: list, client, model: str, reasoning_effort: str | None) ->
     return messages[:2] + [summary] + recent, usage
 
 
-def to_tool_message(tool_call_id: str, result: dict) -> dict:
+def to_tool_message(tool_call_id, result):
     """The message that carries a tool result back to the model, truncated."""
     return {"role": "tool", "tool_call_id": tool_call_id, "content": truncate(json.dumps(result))}

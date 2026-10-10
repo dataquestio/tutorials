@@ -25,13 +25,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 import permissions
-from agent import AgentConfig, AgentResult, run_agent
+from agent import AgentConfig, run_agent
 from run import prepare_workspace
 
 RECENT_PROGRESS_LINES = 15
 
 
-def load_state(state_dir: Path, start_day: str) -> dict:
+def load_state(state_dir, start_day):
     """Read state.json, or start fresh at start_day."""
     path = Path(state_dir) / "state.json"
     if path.exists():
@@ -39,7 +39,7 @@ def load_state(state_dir: Path, start_day: str) -> dict:
     return {"current_day": start_day, "completed_days": [], "tokens_used_total": 0, "pending_approvals": []}
 
 
-def save_state(state_dir: Path, state: dict) -> None:
+def save_state(state_dir, state):
     """Write state.json so that a crash never leaves a half-written file."""
     path = Path(state_dir) / "state.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -48,11 +48,11 @@ def save_state(state_dir: Path, state: dict) -> None:
     os.replace(tmp, path)
 
 
-def next_day(day: str) -> str:
+def next_day(day):
     return (date.fromisoformat(day) + timedelta(days=1)).isoformat()
 
 
-def recent_progress(state_dir: Path) -> str:
+def recent_progress(state_dir):
     path = Path(state_dir) / "progress.md"
     if not path.exists():
         return "(no earlier runs)"
@@ -60,7 +60,7 @@ def recent_progress(state_dir: Path) -> str:
     return "\n".join(lines[-RECENT_PROGRESS_LINES:])
 
 
-def build_day_task(day: str, state: dict, state_dir: Path) -> str:
+def build_day_task(day, state, state_dir):
     """The task for one daily run. Everything the agent needs from earlier days is in here or in state/."""
     return (
         f"Process the feed for {day}.\n\n"
@@ -70,15 +70,15 @@ def build_day_task(day: str, state: dict, state_dir: Path) -> str:
     )
 
 
-def queue_for_human(state: dict, day: str):
+def queue_for_human(state, day):
     """An approver for unattended runs: record the request and say no for now."""
-    def approver(tool: str, args: dict) -> bool:
+    def approver(tool, args):
         state["pending_approvals"].append({"day": day, "tool": tool, "args": args})
         return False
     return approver
 
 
-def run_day(day: str, state_dir: Path, config: AgentConfig, client=None) -> AgentResult:
+def run_day(day, state_dir, config, client=None):
     """Run the agent on one day with a fresh conversation, then commit the day."""
     state_dir = Path(state_dir)
     state_dir.mkdir(parents=True, exist_ok=True)
@@ -97,7 +97,7 @@ def run_day(day: str, state_dir: Path, config: AgentConfig, client=None) -> Agen
     return result
 
 
-def run_range(start: str, end: str, config: AgentConfig, max_total_tokens: int, client=None) -> str:
+def run_range(start, end, config, max_total_tokens, client=None):
     """Run day after day until the end day, the total budget, or an error. Returns why it stopped."""
     state_dir = Path(config.workspace) / "state"
     state = load_state(state_dir, start)

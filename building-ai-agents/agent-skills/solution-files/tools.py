@@ -22,7 +22,7 @@ RUN_TIMEOUT_SECONDS = 120
 WORKSPACE = None
 
 
-def resolve_in_workspace(path: str) -> Path:
+def resolve_in_workspace(path):
     """Turn a path from the model into a path inside the workspace.
 
     The path is normalized (so "a/../.." collapses) but symlinks are not
@@ -36,7 +36,7 @@ def resolve_in_workspace(path: str) -> Path:
     return Path(full)
 
 
-def list_files(path: str = ".") -> dict:
+def list_files(path="."):
     """List the files and folders in a workspace directory."""
     try:
         folder = resolve_in_workspace(path)
@@ -51,7 +51,7 @@ def list_files(path: str = ".") -> dict:
         return {"error": str(e)}
 
 
-def read_file(path: str, start_line: int = 1, max_lines: int = 50) -> dict:
+def read_file(path, start_line=1, max_lines=50):
     """Read a slice of lines from a text file.
 
     Data files can be hundreds of megabytes, so this never reads a whole
@@ -71,7 +71,7 @@ def read_file(path: str, start_line: int = 1, max_lines: int = 50) -> dict:
         return {"error": str(e)}
 
 
-def write_file(path: str, content: str) -> dict:
+def write_file(path, content):
     """Create or overwrite a text file in the workspace."""
     try:
         target = resolve_in_workspace(path)
@@ -82,7 +82,7 @@ def write_file(path: str, content: str) -> dict:
         return {"error": str(e)}
 
 
-def run_command(command: list[str] | str, shell: bool) -> dict:
+def run_command(command, shell):
     """Run a command in the workspace and capture what it prints."""
     try:
         completed = subprocess.run(
@@ -100,19 +100,19 @@ def run_command(command: list[str] | str, shell: bool) -> dict:
         return {"error": str(e)}
 
 
-def run_python(code: str) -> dict:
+def run_python(code):
     """Run a Python script in the workspace. Only printed output comes back."""
     # sys.executable is the same Python that runs the agent, so pandas and
     # the other installed libraries are available to the script.
     return run_command([sys.executable, "-c", code], shell=False)
 
 
-def run_shell(command: str) -> dict:
+def run_shell(command):
     """Run a shell command in the workspace."""
     return run_command(command, shell=True)
 
 
-def tool(fn, description: str, properties: dict, required: list[str]) -> dict:
+def tool(fn, description, properties, required):
     """Pair a function with the schema the model sees."""
     return {
         "schema": {
@@ -172,12 +172,12 @@ TOOLS = {
 }
 
 
-def tool_schemas() -> list[dict]:
+def tool_schemas():
     """The tool definitions to send with every model call."""
     return [t["schema"] for t in TOOLS.values()]
 
 
-def call_tool(name: str, arguments: dict) -> dict:
+def call_tool(name, arguments):
     """Run a tool by name. Unknown tools and bad arguments come back as errors."""
     if name not in TOOLS:
         return {"error": f"Unknown tool: {name}"}

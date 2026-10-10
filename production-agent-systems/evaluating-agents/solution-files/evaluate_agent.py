@@ -60,7 +60,7 @@ THRESHOLDS = {
 }
 
 
-def rebuild_catalog_until(workspace: Path, day: str) -> None:
+def rebuild_catalog_until(workspace, day):
     """Apply every feed day before `day` to the catalog, without the model."""
     tools.WORKSPACE = workspace
     current = date.fromisoformat(FIRST_FEED_DAY)
@@ -69,7 +69,7 @@ def rebuild_catalog_until(workspace: Path, day: str) -> None:
         current += timedelta(days=1)
 
 
-def expected_outcome(workspace: Path, day: str) -> dict:
+def expected_outcome(workspace, day):
     """What a correct run must do on this day, computed from the data."""
     tools.WORKSPACE = workspace
     known = tools.load_catalog()
@@ -86,14 +86,14 @@ def expected_outcome(workspace: Path, day: str) -> dict:
     return {"flag_ids": sorted(flag_ids), "alert_ids": sorted(alert_ids)}
 
 
-def read_jsonl(path: Path) -> list[dict]:
+def read_jsonl(path):
     if not path.exists():
         return []
     with open(path, encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def score_case(day: str, workspace: Path, trace_path: Path, expected: dict) -> dict:
+def score_case(day, workspace, trace_path, expected):
     """Turn one run's trace and state into metrics."""
     events = read_jsonl(trace_path)
     calls = [e for e in events if e["type"] == "tool_call"]
@@ -132,7 +132,7 @@ def score_case(day: str, workspace: Path, trace_path: Path, expected: dict) -> d
     }
 
 
-def run_suite(data_dir: Path, variant: str, model: str, trace_dir: Path, client=None, repeats: int = 1) -> dict:
+def run_suite(data_dir, variant, model, trace_dir, client=None, repeats=1):
     """Run every suite day `repeats` times with one variant. Traces are kept in trace_dir.
 
     The same day can pass on one run and fail on the next. Repeating each
@@ -179,7 +179,7 @@ def run_suite(data_dir: Path, variant: str, model: str, trace_dir: Path, client=
     }
 
 
-def find_regressions(baseline: dict, candidate: dict) -> list[str]:
+def find_regressions(baseline, candidate):
     """Compare two suite results metric by metric."""
     found = []
     b, c = baseline["summary"], candidate["summary"]

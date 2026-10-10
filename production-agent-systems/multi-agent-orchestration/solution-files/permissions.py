@@ -10,7 +10,7 @@ queues the request for a human instead.
 """
 
 
-def terminal_approver(tool: str, args: dict) -> bool:
+def terminal_approver(tool, args):
     """Ask the person at the terminal."""
     answer = input(f"\nAllow {tool} with {args}? [y/N] ")
     return answer.strip().lower() == "y"
@@ -19,12 +19,12 @@ def terminal_approver(tool: str, args: dict) -> bool:
 APPROVER = terminal_approver
 
 
-def approve(tool: str, args: dict) -> bool:
+def approve(tool, args):
     """Decide an "ask" tool call with the current approver."""
     return APPROVER(tool, args)
 
 
-def decide(tool: str, args: dict, policy: dict[str, str]) -> str:
+def decide(tool, args, policy):
     """Return "allow" or "deny" for one tool call under a policy."""
     rule = policy.get(tool, "ask")
     if rule == "allow":

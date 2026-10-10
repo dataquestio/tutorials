@@ -22,7 +22,7 @@ client = OpenAI()
 DATA_DIR = None
 
 
-def count_requests_by_borough(problem: str) -> dict:
+def count_requests_by_borough(problem):
     """Count summer 2026 service requests of one problem type, per borough."""
     counts = Counter()
     with open(DATA_DIR / "service_requests.csv", newline="", encoding="utf-8") as f:
@@ -52,7 +52,7 @@ tools = [
 ]
 
 
-def run_agent(user_message: str, max_iterations: int = 10) -> str:
+def run_agent(user_message, max_iterations=10):
     """Run the tool loop until the model answers without calling a tool."""
     messages = [
         {"role": "system", "content": "You answer questions about NYC 311 service requests using the available tools."},

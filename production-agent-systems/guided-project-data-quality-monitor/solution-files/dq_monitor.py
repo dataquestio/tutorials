@@ -27,7 +27,7 @@ from dotenv import load_dotenv
 
 import permissions
 import tools
-from agent import AgentConfig, AgentResult, run_agent
+from agent import AgentConfig, run_agent
 from run import prepare_workspace
 from runner import load_state, next_day, queue_for_human, recent_progress, save_state
 
@@ -51,7 +51,7 @@ DQ_POLICY = {
 # The profiling tool
 # ---------------------------------------------------------------------------
 
-def load_profiles() -> dict:
+def load_profiles():
     path = tools.resolve_in_workspace(PROFILES_FILE)
     if not path.exists():
         return {}
@@ -59,7 +59,7 @@ def load_profiles() -> dict:
         return {p["day"]: p for p in map(json.loads, f)}
 
 
-def save_profiles(profiles: dict) -> None:
+def save_profiles(profiles):
     path = tools.resolve_in_workspace(PROFILES_FILE)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
@@ -69,14 +69,14 @@ def save_profiles(profiles: dict) -> None:
     os.replace(tmp, path)
 
 
-def parse_time(value: str):
+def parse_time(value):
     try:
         return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
     except (TypeError, ValueError):
         return None
 
 
-def cross_network_pairs(rows: list[dict]) -> list[list[str]]:
+def cross_network_pairs(rows):
     """Pairs of rows from different networks that look like the same earthquake."""
     events = []
     for row in rows:
@@ -96,7 +96,7 @@ def cross_network_pairs(rows: list[dict]) -> list[list[str]]:
     return pairs
 
 
-def profile_day(day: str) -> dict:
+def profile_day(day):
     """Measure one day's feed file and compare it with earlier days.
 
     The profile is saved in state/profiles.jsonl, so later days can compare
@@ -176,7 +176,7 @@ tools.TOOLS["profile_day"] = tools.tool(
 # The daily loop
 # ---------------------------------------------------------------------------
 
-def build_dq_task(day: str, state: dict, state_dir: Path) -> str:
+def build_dq_task(day, state, state_dir):
     return (
         f"Run the data quality checks for the feed day {day}. Load the data-quality-checks skill first.\n\n"
         f"Days already checked: {len(state['completed_days'])}.\n\n"
@@ -184,7 +184,7 @@ def build_dq_task(day: str, state: dict, state_dir: Path) -> str:
     )
 
 
-def run_dq_day(day: str, state_dir: Path, config: AgentConfig, client=None) -> AgentResult:
+def run_dq_day(day, state_dir, config, client=None):
     """One data quality run with a fresh conversation, committed like runner.run_day."""
     state_dir = Path(state_dir)
     state_dir.mkdir(parents=True, exist_ok=True)
@@ -202,7 +202,7 @@ def run_dq_day(day: str, state_dir: Path, config: AgentConfig, client=None) -> A
     return result
 
 
-def run_dq_range(start: str, end: str, config: AgentConfig, max_total_tokens: int, client=None) -> str:
+def run_dq_range(start, end, config, max_total_tokens, client=None):
     state_dir = Path(config.workspace) / "state"
     state = load_state(state_dir, start)
     while state["current_day"] <= end:
@@ -219,7 +219,7 @@ def run_dq_range(start: str, end: str, config: AgentConfig, max_total_tokens: in
 # Scoring and the report
 # ---------------------------------------------------------------------------
 
-def read_jsonl(path) -> list[dict]:
+def read_jsonl(path):
     path = Path(path)
     if not path.exists():
         return []
@@ -227,14 +227,14 @@ def read_jsonl(path) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
-def matches(flag: dict, issue: dict) -> bool:
+def matches(flag, issue):
     if flag.get("kind") != issue["type"] or flag.get("day") != issue["day"]:
         return False
     event_id = issue["details"].get("event_id")
     return event_id is None or event_id in flag.get("event_ids", [])
 
 
-def score(flags: list[dict], planted: list[dict], days: list[str]) -> dict:
+def score(flags, planted, days):
     """Compare data quality flags with the planted issues on the given days.
 
     Only flags whose kind is one of the issue types count. A flag is a true
@@ -262,7 +262,7 @@ def score(flags: list[dict], planted: list[dict], days: list[str]) -> dict:
     }
 
 
-def report(workspace: Path, trace_path: Path, planted_path: Path, start: str, end: str) -> dict:
+def report(workspace, trace_path, planted_path, start, end):
     """Task completion, tool usage efficiency, safety checks, and detection quality for one run."""
     state = load_state(workspace / "state", start)
     days, day = [], start

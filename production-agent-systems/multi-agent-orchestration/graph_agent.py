@@ -45,6 +45,10 @@ from runner import build_day_task, load_state, next_day, save_state
 from tracing import write_event
 
 
+# LangGraph reads the graph's state from a class like this one. The ": type"
+# after each key is LangGraph's syntax, not optional decoration: it tells
+# LangGraph which keys the state has, and Annotated[..., operator.add] tells it
+# to add a node's update to the old value instead of replacing it.
 class DayState(TypedDict):
     day: str
     # operator.add means each node's returned messages are appended, not replaced.
@@ -55,7 +59,7 @@ class DayState(TypedDict):
     output_tokens: Annotated[int, operator.add]
 
 
-def assistant_dict(message) -> dict:
+def assistant_dict(message):
     """Store the model's message as a plain dict so the checkpointer can save it."""
     data = {"role": "assistant", "content": message.content}
     if message.tool_calls:
@@ -66,13 +70,13 @@ def assistant_dict(message) -> dict:
     return data
 
 
-def build_graph(config: AgentConfig, client, checkpointer):
+def build_graph(config, client, checkpointer):
     """Compile the monitor graph for one configuration."""
     extra = {"tools": tools.tool_schemas()}
     if config.reasoning_effort is not None:
         extra["reasoning_effort"] = config.reasoning_effort
 
-    def model_node(state: DayState) -> dict:
+    def model_node(state):
         started = time.monotonic()
         response = client.chat.completions.create(model=config.model, messages=state["messages"], **extra)
         usage = response.usage
@@ -86,7 +90,7 @@ def build_graph(config: AgentConfig, client, checkpointer):
             "output_tokens": usage.completion_tokens,
         }
 
-    def approval_node(state: DayState) -> dict:
+    def approval_node(state):
         # interrupt() stops the graph here and saves it. When the graph is
         # resumed, this node runs again from the top and interrupt() returns
         # the human's answer. Nothing before interrupt() may have side
@@ -106,7 +110,7 @@ def build_graph(config: AgentConfig, client, checkpointer):
                         tool=name, result={"decision": decisions[call["id"]]})
         return {"decisions": decisions}
 
-    def tools_node(state: DayState) -> dict:
+    def tools_node(state):
         results = []
         for call in state["messages"][-1]["tool_calls"]:
             name = call["function"]["name"]
@@ -126,7 +130,7 @@ def build_graph(config: AgentConfig, client, checkpointer):
             results.append({"role": "tool", "tool_call_id": call["id"], "content": tools.format_result(result)})
         return {"messages": results}
 
-    def after_model(state: DayState) -> str:
+    def after_model(state):
         if not state["messages"][-1].get("tool_calls"):
             return END
         if state["steps"] >= config.max_steps:
@@ -146,11 +150,11 @@ def build_graph(config: AgentConfig, client, checkpointer):
     return graph.compile(checkpointer=checkpointer)
 
 
-def thread(day: str) -> dict:
+def thread(day):
     return {"configurable": {"thread_id": f"day-{day}"}}
 
 
-def run_or_resume_day(graph, day: str, state_dir: Path, run_state: dict, resume=None) -> str:
+def run_or_resume_day(graph, day, state_dir, run_state, resume=None):
     """Run one day's thread to the end or to an approval pause. Returns "done" or "paused"."""
     saved = graph.get_state(thread(day))
     if resume is not None:
@@ -175,12 +179,12 @@ def run_or_resume_day(graph, day: str, state_dir: Path, run_state: dict, resume=
     return "done"
 
 
-def day_tokens(graph, day: str) -> int:
+def day_tokens(graph, day):
     values = graph.get_state(thread(day)).values
     return values.get("input_tokens", 0) + values.get("output_tokens", 0)
 
 
-def make_graph(workspace: Path, args, client=None):
+def make_graph(workspace, args, client=None):
     config = AgentConfig(
         model=args.model, workspace=workspace, trace_path=Path(args.trace_path),
         max_steps=args.max_steps, max_tokens_total=args.max_tokens_per_day,
@@ -190,7 +194,7 @@ def make_graph(workspace: Path, args, client=None):
     return build_graph(config, client or OpenAI(), SqliteSaver(connection))
 
 
-def run_command(args) -> None:
+def run_command(args):
     workspace = Path(args.workspace)
     prepare_workspace(workspace, Path(args.data_dir))
     state_dir = workspace / "state"
@@ -212,7 +216,7 @@ def run_command(args) -> None:
         print(f"{day}: {outcome}, {day_tokens(graph, day)} tokens")
 
 
-def approve_command(args) -> None:
+def approve_command(args):
     workspace = Path(args.workspace)
     state_dir = workspace / "state"
     graph = make_graph(workspace, args)

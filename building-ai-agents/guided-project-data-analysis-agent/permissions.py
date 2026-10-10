@@ -26,7 +26,7 @@ DEFAULT_POLICY = {
 }
 
 
-def terminal_approver(tool: str, args: dict) -> bool:
+def terminal_approver(tool, args):
     """Ask the person at the terminal. Anything but 'y' is a no."""
     if not sys.stdin.isatty():
         print(f"[approval needed for {tool}, but no one is at the terminal: denied]")
@@ -39,12 +39,12 @@ def terminal_approver(tool: str, args: dict) -> bool:
 APPROVER = terminal_approver
 
 
-def approve(tool: str, args: dict) -> bool:
+def approve(tool, args):
     """Ask for approval of one tool call."""
     return APPROVER(tool, args)
 
 
-def decide(tool: str, args: dict, policy: dict[str, str]) -> str:
+def decide(tool, args, policy):
     """Return the outcome for one tool call: allowed, approved, rejected, or denied."""
     rule = policy.get(tool, "ask")
     if rule == "allow":

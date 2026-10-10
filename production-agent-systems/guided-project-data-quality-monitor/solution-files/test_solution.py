@@ -44,7 +44,7 @@ ALLOW_ALL = {name: "allow" for name in tools.TOOLS}
 # The fake model
 # ---------------------------------------------------------------------------
 
-def completion(content=None, calls=(), prompt_tokens=100, completion_tokens=10) -> ChatCompletion:
+def completion(content=None, calls=(), prompt_tokens=100, completion_tokens=10):
     """A model response built from the same types the openai SDK returns."""
     tool_calls = [
         ChatCompletionMessageToolCall(
@@ -85,7 +85,7 @@ def message_field(message, field):
     return message[field] if isinstance(message, dict) else getattr(message, field)
 
 
-def tool_messages(client) -> list[str]:
+def tool_messages(client):
     """Contents of every tool message the agent sent back to the model."""
     seen = []
     for request in client.requests:
@@ -120,7 +120,7 @@ class MonitorTestCase(unittest.TestCase):
         settings.update(overrides)
         return AgentConfig(**settings)
 
-    def trace(self) -> list[dict]:
+    def trace(self):
         with open(self.trace_path, encoding="utf-8") as f:
             return [json.loads(line) for line in f]
 
@@ -232,7 +232,7 @@ class TestPermissions(MonitorTestCase):
                          "Permissions: a queued alert must not be sent before a human approves it")
 
 
-def read_skill_files() -> dict:
+def read_skill_files():
     found = {}
     for path in sorted((Path(__file__).resolve().parent / "skills").glob("*/SKILL.md")):
         text = path.read_text(encoding="utf-8")
