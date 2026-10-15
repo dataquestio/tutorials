@@ -1,0 +1,24 @@
+{
+  "_note": "Curated excerpt of the bundled eBird taxonomy reference. The shipped file should hold ~60-150 taxa; this excerpt covers everything the data touches plus a few near-match decoys (real species that could be confused). FIELDS mirror the eBird taxonomy: speciesCode, comName, sciName, category, familyComName.",
+  "_verify": "speciesCode and sciName values marked (verify) must be confirmed against the eBird taxonomy download / /ref/taxonomy/ebird before shipping. The 9 primary species codes are standard and high-confidence; decoy and non-species codes are the ones to check.",
+  "species": [
+    {"speciesCode": "cangoo",  "comName": "Canada Goose",        "sciName": "Branta canadensis",   "category": "species", "familyComName": "Ducks, Geese, and Waterfowl"},
+    {"speciesCode": "mallar3", "comName": "Mallard",             "sciName": "Anas platyrhynchos",  "category": "species", "familyComName": "Ducks, Geese, and Waterfowl"},
+    {"speciesCode": "wooduc",  "comName": "Wood Duck",           "sciName": "Aix sponsa",          "category": "species", "familyComName": "Ducks, Geese, and Waterfowl"},
+    {"speciesCode": "cedwax",  "comName": "Cedar Waxwing",       "sciName": "Bombycilla cedrorum", "category": "species", "familyComName": "Waxwings"},
+    {"speciesCode": "annhum",  "comName": "Anna's Hummingbird",  "sciName": "Calypte anna",        "category": "species", "familyComName": "Hummingbirds"},
+    {"speciesCode": "rethaw",  "comName": "Red-tailed Hawk",     "sciName": "Buteo jamaicensis",   "category": "species", "familyComName": "Hawks, Eagles, and Kites"},
+    {"speciesCode": "grbher3", "comName": "Great Blue Heron",    "sciName": "Ardea herodias",      "category": "species", "familyComName": "Herons, Egrets, and Bitterns"},
+    {"speciesCode": "amerob",  "comName": "American Robin",      "sciName": "Turdus migratorius",  "category": "species", "familyComName": "Thrushes and Allies"},
+    {"speciesCode": "grtgra",  "comName": "Great-tailed Grackle","sciName": "Quiscalus mexicanus", "category": "species", "familyComName": "Blackbirds"},
+
+    {"speciesCode": "cacgoo1", "comName": "Cackling Goose",      "sciName": "Branta hutchinsii",   "category": "species", "familyComName": "Ducks, Geese, and Waterfowl", "_role": "decoy: near-match for Canada Goose"},
+    {"speciesCode": "comgra",  "comName": "Common Grackle",      "sciName": "Quiscalus quiscula",  "category": "species", "familyComName": "Blackbirds", "_role": "decoy: near-match for Great-tailed Grackle (and an eastern bird, so out of range here)"},
+    {"speciesCode": "rufhum",  "comName": "Rufous Hummingbird",  "sciName": "Selasphorus rufus",   "category": "species", "familyComName": "Hummingbirds", "_role": "decoy: near-match for Anna's Hummingbird"},
+    {"speciesCode": "hergul",  "comName": "Herring Gull",        "sciName": "Larus argentatus",    "category": "species", "familyComName": "Gulls, Terns, and Skimmers", "_role": "decoy: a real gull, but the note wasn't specific enough to use it"},
+    {"speciesCode": "coohaw",  "comName": "Cooper's Hawk",       "sciName": "Astur cooperii",      "category": "species", "familyComName": "Hawks, Eagles, and Kites", "_role": "decoy: a real hawk, but the note wasn't specific enough to use it", "_verify": "sciName recently moved Accipiter -> Astur; confirm against current taxonomy"},
+
+    {"speciesCode": "gullsp",  "comName": "gull sp.",            "sciName": "Larinae sp.",         "category": "spuh", "familyComName": "Gulls, Terns, and Skimmers", "_verify": "confirm speciesCode/sciName for the spuh entry"},
+    {"speciesCode": "hawksp",  "comName": "hawk sp.",            "sciName": "Accipitriformes sp.", "category": "spuh", "familyComName": "Hawks, Eagles, and Kites", "_verify": "confirm speciesCode/sciName for the spuh entry"}
+  ]
+}

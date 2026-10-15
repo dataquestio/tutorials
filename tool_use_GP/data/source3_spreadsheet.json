@@ -1,0 +1,12 @@
+{
+  "_note": "Legacy hand-typed count sheet, exported to JSON. Reference year: 2026. Columns are inconsistent and dirty on purpose.",
+  "rows": [
+    {"sp": "Canda Goose",        "n": "12 (est)", "where": "Cedar Ridge", "when": "5/9"},
+    {"sp": "Quiscalus mexicanus", "n": "4",       "where": "Cedar Ridge", "when": "5/10"},
+    {"sp": "American Robbin",     "n": "5",        "where": "",            "when": "5/9/26"},
+    {"sp": "",                   "n": "2",        "where": "Marsh",       "when": "5/9"},
+    {"sp": "Jackalope Warbler",  "n": "1",        "where": "Cedar Ridge", "when": "5/11"},
+    {"sp": "Canadian Goose",     "n": "8",        "where": "North Marsh", "when": "5/12"},
+    {"sp": "annas hummingbird",  "n": "3",        "where": "North Marsh", "when": "5/12"}
+  ]
+}
