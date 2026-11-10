@@ -31,6 +31,8 @@ if __name__ == "__main__":
     parser.add_argument("--trace-path", default="traces/trace.jsonl")
     parser.add_argument("--model", default=os.environ.get("AGENT_MODEL", "gpt-6-luna"))
     parser.add_argument("--max-steps", type=int, default=20)
+    # Add two options here: --max-tokens (the whole-run token budget) and
+    # --compact-at (the compaction threshold).
     args = parser.parse_args()
 
     workspace = Path(args.workspace)
@@ -41,6 +43,8 @@ if __name__ == "__main__":
         workspace=workspace,
         trace_path=Path(args.trace_path),
         max_steps=args.max_steps,
+        # Pass the new --max-tokens and --compact-at options to AgentConfig here,
+        # as max_tokens_total and compact_at_tokens.
     )
     result = run_agent(args.question, config)
 
