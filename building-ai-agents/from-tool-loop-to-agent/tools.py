@@ -85,33 +85,28 @@ def read_file(path, start_line=1, max_lines=50):
 
     Data files can be hundreds of megabytes, so this never reads a whole
     file into the conversation. Use run_python to analyze full files.
-
-    TODO:
-    - Resolve path inside the workspace
-    - Read up to max_lines lines from start_line
-    - Return path, start_line, lines, and next_line
-    - Return {"error": ...} on failure
     """
+    # TODO:
+    # - Resolve path inside the workspace
+    # - Read up to max_lines lines from start_line
+    # - Return path, start_line, lines, and next_line
+    # - Return {"error": ...} on failure
     ...
 
 
 def run_python(code):
-    """Run a Python script in the workspace. Only printed output comes back.
-
-    TODO:
-    - Run code through run_command with shell=False
-    - Return the result
-    """
+    """Run a Python script in the workspace. Only printed output comes back."""
+    # TODO:
+    # - Run code through run_command with shell=False
+    # - Return the result
     ...
 
 
 def run_shell(command):
-    """Run a shell command in the workspace.
-
-    TODO:
-    - Run command through run_command with shell=True
-    - Return the result
-    """
+    """Run a shell command in the workspace."""
+    # TODO:
+    # - Run command through run_command with shell=True
+    # - Return the result
     ...
 
 
@@ -175,12 +170,10 @@ def tool_schemas():
 
 
 def call_tool(name, arguments):
-    """Run a tool by name. Unknown tools and bad arguments come back as errors.
-
-    TODO:
-    - Look up name in TOOLS
-    - Call its function with arguments
-    - Return {"error": ...} for an unknown tool
-    - Return {"error": ...} for bad arguments
-    """
+    """Run a tool by name. Unknown tools and bad arguments come back as errors."""
+    # TODO:
+    # - Look up name in TOOLS
+    # - Call its function with arguments
+    # - Return {"error": ...} for an unknown tool
+    # - Return {"error": ...} for bad arguments
     ...

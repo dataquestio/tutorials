@@ -29,24 +29,20 @@ Be specific and brief. Use bullet points."""
 
 
 def truncate(text, limit=MAX_TOOL_OUTPUT_CHARS):
-    """Cut a tool result down to the limit and say how much was cut.
-
-    TODO:
-    - Return text unchanged if it fits the limit
-    - Keep the first limit characters
-    - Add a note with the number of characters cut
-    """
+    """Cut a tool result down to the limit and say how much was cut."""
+    # TODO:
+    # - Return text unchanged if it fits the limit
+    # - Keep the first limit characters
+    # - Add a note with the number of characters cut
     ...
 
 
 def load_notes(workspace):
-    """Read NOTES.md from the workspace, if the agent has written one.
-
-    TODO:
-    - Build the path to NOTES_FILE in workspace
-    - Return its text if it exists
-    - Return None otherwise
-    """
+    """Read NOTES.md from the workspace, if the agent has written one."""
+    # TODO:
+    # - Build the path to NOTES_FILE in workspace
+    # - Return its text if it exists
+    # - Return None otherwise
     ...
 
 
@@ -73,14 +69,13 @@ def split_point(messages):
 
     A tool result must stay right after the assistant message that asked
     for it, so the split moves back until it lands on an assistant message.
-
-    TODO:
-    - Step index back until it lands on an assistant message
-    - Stop at index 2
-    - Read each role with as_dict
-    - Return index
     """
     index = max(2, len(messages) - KEEP_RECENT_MESSAGES)
+    # TODO:
+    # - Step index back until it lands on an assistant message
+    # - Stop at index 2
+    # - Read each role with as_dict
+    # - Return index
     ...
 
 
@@ -89,10 +84,6 @@ def compact(messages, client, model, reasoning_effort):
 
     messages[0] is the system prompt and messages[1] is the task. Both stay.
     Returns the new message list and the token usage of the summary call.
-
-    TODO:
-    - Split the messages at the TODO above the summary call
-    - Rebuild the messages at the TODO below it
     """
     # TODO:
     # - Find start with split_point
@@ -119,11 +110,9 @@ def compact(messages, client, model, reasoning_effort):
 
 
 def to_tool_message(tool_call_id, result):
-    """The message that carries a tool result back to the model, truncated.
-
-    TODO:
-    - Serialize result to JSON
-    - Pass it through truncate
-    - Return a tool message with tool_call_id and content
-    """
+    """The message that carries a tool result back to the model, truncated."""
+    # TODO:
+    # - Serialize result to JSON
+    # - Pass it through truncate
+    # - Return a tool message with tool_call_id and content
     ...

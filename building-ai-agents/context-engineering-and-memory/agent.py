@@ -38,13 +38,11 @@ How to work:
 
 
 def build_system_prompt(workspace):
-    """The system prompt, plus notes from earlier runs if there are any.
-
-    TODO:
-    - Load notes with memory.load_notes
-    - Return SYSTEM_PROMPT with the notes below it if there are any
-    - Return SYSTEM_PROMPT otherwise
-    """
+    """The system prompt, plus notes from earlier runs if there are any."""
+    # TODO:
+    # - Load notes with memory.load_notes
+    # - Return SYSTEM_PROMPT with the notes below it if there are any
+    # - Return SYSTEM_PROMPT otherwise
     ...
 
 
@@ -92,11 +90,7 @@ def workspace_files(workspace):
 
 
 def run_agent(task, config, client=None):
-    """Work on a task until the model answers or a limit is reached.
-
-    TODO:
-    - Complete the TODOs marked below
-    """
+    """Work on a task until the model answers or a limit is reached."""
     client = client or OpenAI()
     tools.WORKSPACE = config.workspace
     run_id = uuid.uuid4().hex[:12]

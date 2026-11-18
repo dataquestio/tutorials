@@ -67,12 +67,7 @@ def workspace_files(workspace):
 
 
 def run_agent(task, config, client=None):
-    """Work on a task until the model answers or a limit is reached.
-
-    TODO:
-    - Fill in the loop body at the TODO inside the while loop
-    - Add tracing and bookkeeping at the other TODOs below
-    """
+    """Work on a task until the model answers or a limit is reached."""
     client = client or OpenAI()
     tools.WORKSPACE = config.workspace
     messages = [
