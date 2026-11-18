@@ -6,13 +6,7 @@ This is the tool loop from the Function Calling lesson with three changes:
 2. Explicit stopping conditions: a final answer, a step limit, or a token budget.
 3. A system prompt that tells the model to check its results before answering.
 
-This is the starter. You fill it in as the lesson walks through it:
-  - the run_agent loop body (the scaffold is below)
-  - a "How to work" section added to SYSTEM_PROMPT
-  - the provided write_event tracing calls placed into run_agent
-  - run_agent returning an AgentResult instead of a plain string
-
-AgentConfig, AgentResult, and workspace_files are provided for you.
+This is starter code. Complete each TODO as the lesson walks through it.
 """
 
 import json
@@ -25,17 +19,14 @@ from openai import OpenAI
 import tools
 from tracing import write_event
 
-# You'll expand this prompt with a numbered "How to work" section: explore
-# first, analyze by printing summaries, fix errors and retry, check results
-# for plausibility, and answer with what was computed and checked.
+# TODO:
+# - Add a numbered "How to work" section
 SYSTEM_PROMPT = """You are a data analysis agent. You answer questions about the data in your workspace.
 
 Your workspace is a folder. The data is under data/. You can list and read files, write files, and run Python or shell commands with the workspace as the working directory.
 """
 
 
-# Provided. The agent's settings. `trace_path` is used once you add tracing,
-# and `max_tokens_total` once you add the token budget.
 class AgentConfig:
     def __init__(
         self,
@@ -56,8 +47,6 @@ class AgentConfig:
         self.reasoning_effort = reasoning_effort
 
 
-# Provided. What a run reports back. You return one of these once run_agent
-# reports a full result instead of a plain string.
 class AgentResult:
     def __init__(self, answer, stop_reason, steps, input_tokens, output_tokens, files_written):
         self.answer = answer
@@ -68,9 +57,8 @@ class AgentResult:
         self.files_written = files_written
 
 
-# Provided. Lists every file in the workspace, without following the data/ link.
-# run_agent uses it to report which files the agent wrote.
 def workspace_files(workspace):
+    """All files in the workspace, without following the data/ link."""
     found = set()
     for folder, _, names in os.walk(workspace):
         for name in names:
@@ -79,7 +67,12 @@ def workspace_files(workspace):
 
 
 def run_agent(task, config, client=None):
-    """Work on a task until the model answers or a limit is reached."""
+    """Work on a task until the model answers or a limit is reached.
+
+    TODO:
+    - Fill in the loop body at the TODO inside the while loop
+    - Add tracing and bookkeeping at the other TODOs below
+    """
     client = client or OpenAI()
     tools.WORKSPACE = config.workspace
     messages = [
@@ -87,29 +80,29 @@ def run_agent(task, config, client=None):
         {"role": "user", "content": task},
     ]
 
-    # Later you'll add a run_id = uuid.uuid4().hex[:12] here for the trace, plus
-    # the result bookkeeping: files_before = workspace_files(config.workspace),
-    # input_tokens = output_tokens = 0, and answer, stop_reason = None, "max_steps".
+    # TODO:
+    # - Add run_id for the trace
+    # - Record files_before with workspace_files
+    # - Set input_tokens and output_tokens to 0
+    # - Set answer to None and stop_reason to "max_steps"
 
     step = 0
     while step < config.max_steps:
         step += 1
-        # Fill in the loop body:
-        #   - build the request (model, messages, tools.tool_schemas(), and add
-        #     reasoning_effort only when config.reasoning_effort is not None),
-        #     then call the model and take response.choices[0].message
-        #   - if the reply has no tool_calls, return its content
-        #   - otherwise append the reply, and for each tool call: read its name,
-        #     parse its arguments with json.loads (return an error if the JSON is
-        #     not valid), run it with tools.call_tool, and append the result as a
-        #     tool message (tool_call_id + the result as a JSON string)
+        # TODO:
+        # - Build the request and call the model
+        # - Return the reply's content if it has no tool_calls
+        # - Append the reply and run each tool call
+        # - Append each result as a tool message
         #
-        # Later you'll place the provided write_event tracing calls at the marked
-        # points, track tokens from response.usage, set stop_reason at each exit
-        # (final / error / budget), wrap the model call in try/except, and break
-        # instead of returning.
+        # TODO:
+        # - Place the provided write_event calls
+        # - Add response.usage tokens to the totals
+        # - Set stop_reason and break at each exit
+        # - Wrap the model call in try/except
         ...
 
-    # Later, after the loop, write a "stop" trace event when stop_reason is not
-    # "final", then return an AgentResult instead of the string below.
+    # TODO:
+    # - Write a "stop" trace event unless stop_reason is "final"
+    # - Return an AgentResult instead of this string
     return "Reached the step limit without a final answer."

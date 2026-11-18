@@ -10,9 +10,7 @@ check:
 3. Compaction: when the conversation gets too long, older steps are
    replaced with a model-written summary.
 
-as_dict, render, and SUMMARY_PROMPT are provided for you. You fill in truncate,
-load_notes, split_point, compact, and to_tool_message as the lesson works through
-them.
+This is starter code. Complete each TODO as the lesson walks through it.
 """
 
 import json
@@ -31,16 +29,24 @@ Be specific and brief. Use bullet points."""
 
 
 def truncate(text, limit=MAX_TOOL_OUTPUT_CHARS):
-    """Cut a tool result down to the limit and say how much was cut."""
-    # Return text unchanged when it is within the limit. Otherwise keep the
-    # first limit characters and add a note saying how many were removed.
+    """Cut a tool result down to the limit and say how much was cut.
+
+    TODO:
+    - Return text unchanged if it fits the limit
+    - Keep the first limit characters
+    - Add a note with the number of characters cut
+    """
     ...
 
 
 def load_notes(workspace):
-    """Read NOTES.md from the workspace, if the agent has written one."""
-    # Build the path to NOTES_FILE in the workspace. If it exists, return its
-    # text; otherwise return None.
+    """Read NOTES.md from the workspace, if the agent has written one.
+
+    TODO:
+    - Build the path to NOTES_FILE in workspace
+    - Return its text if it exists
+    - Return None otherwise
+    """
     ...
 
 
@@ -67,13 +73,14 @@ def split_point(messages):
 
     A tool result must stay right after the assistant message that asked
     for it, so the split moves back until it lands on an assistant message.
+
+    TODO:
+    - Step index back until it lands on an assistant message
+    - Stop at index 2
+    - Read each role with as_dict
+    - Return index
     """
-    # This starting index keeps the last KEEP_RECENT_MESSAGES messages, but never
-    # cuts before index 2, so the system prompt and the task always stay.
     index = max(2, len(messages) - KEEP_RECENT_MESSAGES)
-    # Now step back until index lands on an assistant message, then return it.
-    # Read a message's role with as_dict(messages[index])["role"], since some
-    # are SDK objects, not plain dicts.
     ...
 
 
@@ -82,13 +89,17 @@ def compact(messages, client, model, reasoning_effort):
 
     messages[0] is the system prompt and messages[1] is the task. Both stay.
     Returns the new message list and the token usage of the summary call.
+
+    TODO:
+    - Split the messages at the TODO above the summary call
+    - Rebuild the messages at the TODO below it
     """
-    # Split the conversation. Use split_point for the boundary, then separate the
-    # older middle (messages[2:start]) from the recent messages. If there is
-    # nothing old to compact, return messages unchanged with zero usage.
+    # TODO:
+    # - Find start with split_point
+    # - Split older and recent messages
+    # - Return messages and zero usage if older is empty
     ...
 
-    # The summary call, the same shape as run_agent's model call, is provided:
     request = {
         "model": model,
         "messages": [
@@ -100,15 +111,19 @@ def compact(messages, client, model, reasoning_effort):
         request["reasoning_effort"] = reasoning_effort
     response = client.chat.completions.create(**request)
 
-    # Build the result. Wrap the model's reply, response.choices[0].message.content,
-    # in a user message that notes the older steps were removed. Then return the
-    # rebuilt list (the system prompt and task, the summary, and the recent
-    # messages) with a usage dict of the call's prompt_tokens and completion_tokens.
+    # TODO:
+    # - Wrap the reply in a user summary message
+    # - Rebuild the list from the first two messages, summary, and recent
+    # - Return the list and the call's token usage
     ...
 
 
 def to_tool_message(tool_call_id, result):
-    """The message that carries a tool result back to the model, truncated."""
-    # Return the tool-role message (role, tool_call_id, content), with the
-    # result serialized to JSON and passed through truncate.
+    """The message that carries a tool result back to the model, truncated.
+
+    TODO:
+    - Serialize result to JSON
+    - Pass it through truncate
+    - Return a tool message with tool_call_id and content
+    """
     ...

@@ -8,12 +8,7 @@ Every tool returns a dict. When something goes wrong, the tool returns
 {"error": "..."} instead of raising, so the model can read the problem and
 try something else.
 
-The functions above the "YOUR TOOLS" divider are provided. Below it, each tool
-already has its signature in place and you fill in the body as the lesson walks
-through it:
-  - read_file, to read a slice of a file
-  - run_python and run_shell, to run the model's code
-  - call_tool, to run the tool the model asked for
+This is starter code. Complete each TODO as the lesson walks through it.
 """
 
 import os
@@ -25,13 +20,6 @@ RUN_TIMEOUT_SECONDS = 120
 
 # Set by run_agent before the first tool call.
 WORKSPACE = None
-
-
-# ===========================================================================
-# PROVIDED HELPERS AND TOOLS
-# Read these; the tools you write follow the same pattern (take a path or
-# some input, do the work, return a dict or {"error": ...}).
-# ===========================================================================
 
 
 def resolve_in_workspace(path):
@@ -75,10 +63,7 @@ def write_file(path, content):
 
 
 def run_command(command, shell):
-    """Run a command in the workspace and capture what it prints.
-
-    You use this to build run_python and run_shell.
-    """
+    """Run a command in the workspace and capture what it prints."""
     try:
         completed = subprocess.run(
             command,
@@ -95,33 +80,39 @@ def run_command(command, shell):
         return {"error": str(e)}
 
 
-# ===========================================================================
-# YOUR TOOLS
-# ===========================================================================
-
-
 def read_file(path, start_line=1, max_lines=50):
-    # Fill in the body. Resolve the path inside the workspace, read a slice of at
-    # most max_lines lines starting at start_line, and return a dictionary with the
-    # path, start_line, lines, and next_line (or {"error": ...}).
+    """Read a slice of lines from a text file.
+
+    Data files can be hundreds of megabytes, so this never reads a whole
+    file into the conversation. Use run_python to analyze full files.
+
+    TODO:
+    - Resolve path inside the workspace
+    - Read up to max_lines lines from start_line
+    - Return path, start_line, lines, and next_line
+    - Return {"error": ...} on failure
+    """
     ...
 
 
 def run_python(code):
-    # Fill in the body. Run code as a Python script through run_command (shell=False)
-    # and return its result.
+    """Run a Python script in the workspace. Only printed output comes back.
+
+    TODO:
+    - Run code through run_command with shell=False
+    - Return the result
+    """
     ...
 
 
 def run_shell(command):
-    # Fill in the body. Run command through run_command (shell=True) and return its
-    # result.
+    """Run a shell command in the workspace.
+
+    TODO:
+    - Run command through run_command with shell=True
+    - Return the result
+    """
     ...
-# ===========================================================================
-# THE REGISTRY (provided) + call_tool (you write)
-# The registry is active: it refers to the tool functions above, which now all
-# exist as stubs, so it resolves when this file is imported.
-# ===========================================================================
 
 
 def tool(fn, description, properties, required):
@@ -184,7 +175,12 @@ def tool_schemas():
 
 
 def call_tool(name, arguments):
-    # Fill in the body. Look up the tool by name in TOOLS and call its function with
-    # the arguments; return {"error": ...} for an unknown tool or for arguments the
-    # function does not accept.
+    """Run a tool by name. Unknown tools and bad arguments come back as errors.
+
+    TODO:
+    - Look up name in TOOLS
+    - Call its function with arguments
+    - Return {"error": ...} for an unknown tool
+    - Return {"error": ...} for bad arguments
+    """
     ...

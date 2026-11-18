@@ -44,6 +44,11 @@ if __name__ == "__main__":
     )
     result = run_agent(args.question, config)
 
+    # run_agent returns a plain string until it returns an AgentResult.
+    if isinstance(result, str):
+        print(result)
+        raise SystemExit
+
     print("Answer:")
     print(result.answer)
     print()

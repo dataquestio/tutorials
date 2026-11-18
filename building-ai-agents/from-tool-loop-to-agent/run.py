@@ -2,10 +2,6 @@
 
 Usage:
     python run.py --data-dir <path/to/nyc311> --question "Which borough had the most noise complaints in July?"
-
-This is provided for you; you do not edit it. Later in the lesson it is replaced
-with a version that prints the full AgentResult (answer, stop_reason, steps, token
-counts, and any files the agent wrote).
 """
 
 import argparse
@@ -32,9 +28,9 @@ if __name__ == "__main__":
     parser.add_argument("--data-dir", required=True, help="Folder with the data snapshot")
     parser.add_argument("--question", required=True)
     parser.add_argument("--workspace", default="workspace", help="Folder the agent works in")
+    parser.add_argument("--trace-path", default="traces/trace.jsonl")
     parser.add_argument("--model", default=os.environ.get("AGENT_MODEL", "gpt-6-luna"))
     parser.add_argument("--max-steps", type=int, default=20)
-    parser.add_argument("--trace-path", default="traces/trace.jsonl")
     args = parser.parse_args()
 
     workspace = Path(args.workspace)
@@ -46,5 +42,18 @@ if __name__ == "__main__":
         trace_path=Path(args.trace_path),
         max_steps=args.max_steps,
     )
-    answer = run_agent(args.question, config)
-    print(answer)
+    result = run_agent(args.question, config)
+
+    # run_agent returns a plain string until it returns an AgentResult.
+    if isinstance(result, str):
+        print(result)
+        raise SystemExit
+
+    print("Answer:")
+    print(result.answer)
+    print()
+    print(f"Stopped because: {result.stop_reason}")
+    print(f"Steps: {result.steps}")
+    print(f"Tokens: {result.input_tokens} in, {result.output_tokens} out")
+    if result.files_written:
+        print(f"Files written: {', '.join(result.files_written)}")

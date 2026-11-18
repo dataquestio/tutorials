@@ -5,6 +5,8 @@ This is the tool loop from the Function Calling lesson with three changes:
 1. General tools (files, Python, shell) instead of one function per question.
 2. Explicit stopping conditions: a final answer, a step limit, or a token budget.
 3. A system prompt that tells the model to check its results before answering.
+
+This is starter code. Complete each TODO as the lesson walks through it.
 """
 
 import json
@@ -14,13 +16,14 @@ import uuid
 
 from openai import OpenAI
 
-# Add: import memory
+# TODO:
+# - Import memory
 import tools
 from tracing import write_event
 
-# Two sections get added inside SYSTEM_PROMPT as the lesson goes: a "Large files"
-# section and a "Notes" section. Add each as plain text inside the string below
-# (a comment placed inside the string would be sent to the model).
+# TODO:
+# - Add a "Large files" section to the prompt text
+# - Add a "Notes" section to the prompt text
 SYSTEM_PROMPT = """You are a data analysis agent. You answer questions about the data in your workspace.
 
 Your workspace is a folder. The data is under data/. You can list and read files, write files, and run Python or shell commands with the workspace as the working directory.
@@ -35,9 +38,13 @@ How to work:
 
 
 def build_system_prompt(workspace):
-    """The system prompt, plus notes from earlier runs if there are any."""
-    # Load the workspace's notes. If there are any, return SYSTEM_PROMPT with the
-    # notes added below it; otherwise return SYSTEM_PROMPT unchanged.
+    """The system prompt, plus notes from earlier runs if there are any.
+
+    TODO:
+    - Load notes with memory.load_notes
+    - Return SYSTEM_PROMPT with the notes below it if there are any
+    - Return SYSTEM_PROMPT otherwise
+    """
     ...
 
 
@@ -50,7 +57,8 @@ class AgentConfig:
         max_steps=20,
         max_tokens_total=200_000,
         reasoning_effort="none",
-        # Add a compact_at_tokens parameter here; the compaction trigger reads it.
+        # TODO:
+        # - Add compact_at_tokens with a default of 60_000
     ):
         self.model = model
         self.workspace = workspace
@@ -60,7 +68,8 @@ class AgentConfig:
         # gpt-6-luna only accepts tools on Chat Completions with reasoning off.
         # Set to None for providers that don't accept this parameter.
         self.reasoning_effort = reasoning_effort
-        # Store the compact_at_tokens parameter on self here.
+        # TODO:
+        # - Store compact_at_tokens on self
 
 
 class AgentResult:
@@ -83,15 +92,19 @@ def workspace_files(workspace):
 
 
 def run_agent(task, config, client=None):
-    """Work on a task until the model answers or a limit is reached."""
+    """Work on a task until the model answers or a limit is reached.
+
+    TODO:
+    - Complete the TODOs marked below
+    """
     client = client or OpenAI()
     tools.WORKSPACE = config.workspace
     run_id = uuid.uuid4().hex[:12]
     files_before = workspace_files(config.workspace)
 
     messages = [
-        # Change the line below: build the system message with build_system_prompt
-        # (it takes config.workspace) instead of the bare SYSTEM_PROMPT.
+        # TODO:
+        # - Use build_system_prompt(config.workspace) as the content
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": task},
     ]
@@ -148,8 +161,8 @@ def run_agent(task, config, client=None):
                 tool=name, args=arguments, result=result,
                 duration_ms=int((time.monotonic() - started) * 1000),
             )
-            # Change the line below: build this tool-result message by calling
-            # memory.to_tool_message instead of the dict literal by hand.
+            # TODO:
+            # - Build this message with memory.to_tool_message
             messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": json.dumps(result)})
 
         # Check the budget after the step, so the run stops before the next call.
@@ -157,9 +170,10 @@ def run_agent(task, config, client=None):
             stop_reason = "budget"
             break
 
-        # Add the compaction trigger here: when the last call's input passed
-        # config.compact_at_tokens, compact the messages, add the summary call's
-        # usage to the run totals, and write a "compaction" trace event.
+        # TODO:
+        # - Compact messages when usage.prompt_tokens passes config.compact_at_tokens
+        # - Add the summary call's usage to the run totals
+        # - Write a "compaction" trace event
 
     if stop_reason != "final":
         write_event(config.trace_path, run_id, step, "stop", result={"stop_reason": stop_reason})
