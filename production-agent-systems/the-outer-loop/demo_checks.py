@@ -22,6 +22,7 @@ TEST_STATE_DIR = "test_state"
 TEST_TASK_DIR = "test_day_task"
 TEST_DAY_DIR = "test_one_day"
 TEST_EXITS_DIR = "test_exits"
+TEST_SCRIPTED_DAY_DIR = "test_one_day_scripted"
 MONITOR_STATE_DIR = Path("monitor/state")
 
 # The exact line run_day writes, so lines in another format can be spotted.
@@ -250,6 +251,49 @@ class ScriptedModel:
         )
 
 
+def check_one_day_scripted():
+    """Check your run_day's record keeping with a scripted model (no model calls)."""
+    from agent import AgentConfig
+    from runner import run_day
+
+    workspace = Path(TEST_SCRIPTED_DAY_DIR)
+    shutil.rmtree(workspace, ignore_errors=True)
+    workspace.mkdir()
+    config = AgentConfig(model="scripted", workspace=workspace, trace_path=workspace / "trace.jsonl")
+    state_dir = workspace / "state"
+
+    def report(expected_line, done, current_day, tokens):
+        state_path = state_dir / "state.json"
+        if not state_path.exists():
+            print("  fix   state.json wasn't saved. Save the state at the end of run_day.")
+            return False
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        progress = state_dir / "progress.md"
+        last_line = progress.read_text(encoding="utf-8").splitlines()[-1] if progress.exists() else "(no progress.md)"
+        checks = [
+            (last_line == expected_line, f"runner line: {expected_line}", f"the last line of progress.md is {last_line!r}"),
+            (state["completed_days"] == done, f"completed_days is {done}", f"completed_days is {state['completed_days']}"),
+            (state["current_day"] == current_day, f"current_day is {current_day}", f"current_day is {state['current_day']}"),
+            (state["tokens_used_total"] == tokens, f"tokens_used_total is {tokens}", f"tokens_used_total is {state['tokens_used_total']}"),
+        ]
+        for ok, expected, actual in checks:
+            print(f"  ok    {expected}" if ok else f"  fix   expected {expected}, but {actual}")
+        return all(ok for ok, _, _ in checks)
+
+    print("1. A day the scripted model finishes (1,050 tokens):")
+    if run_day("2026-06-01", state_dir, config, ScriptedModel()) is None:
+        print("  fix   run_day returned None. It should return the result from run_agent.")
+        return
+    first = report("[runner] 2026-06-01: stop=final steps=1 tokens=1050", ["2026-06-01"], "2026-06-02", 1050)
+
+    print("\n2. A day where the model can't be reached:")
+    run_day("2026-06-02", state_dir, config, ScriptedModel(fail=True))
+    second = report("[runner] 2026-06-02: stop=error steps=1 tokens=0", ["2026-06-01"], "2026-06-02", 1050)
+
+    if first and second:
+        print("\nEverything checks out. Your run_day is ready for a live day.")
+
+
 def check_exits():
     """Run run_range with a scripted model to see each way it stops (no model calls)."""
     from agent import AgentConfig
@@ -332,6 +376,7 @@ CHECKS = {
     "save_load": (check_save_load, "Screen 3: test load_state and save_state (no model calls)"),
     "day_task": (check_day_task, "Screen 4: show the task the runner would send for June 7 (no model calls)"),
     "approvals": (check_approvals, "Screen 5: run a sample alert through the policy with your approver (no model calls)"),
+    "one_day_scripted": (check_one_day_scripted, "Screen 6: check run_day's record keeping with a scripted model (no model calls)"),
     "one_day": (check_one_day, "Screen 6: run your run_day on June 7 (live model calls, about 10,000 to 16,000 tokens)"),
     "exits": (check_exits, "Screen 7: run run_range with a scripted model to see each exit (no model calls)"),
     "repeated_day": (check_repeated_day, "Screen 10: look for signs of a repeated day in monitor/state/ (no model calls)"),
@@ -343,7 +388,7 @@ if __name__ == "__main__":
     # relative paths above always point at the right files.
     os.chdir(Path(__file__).resolve().parent)
 
-    menu = "\n".join(f"  {name:<14} {description}" for name, (_, description) in CHECKS.items())
+    menu = "\n".join(f"  {name:<17} {description}" for name, (_, description) in CHECKS.items())
     parser = argparse.ArgumentParser(
         description="Quick checks for this lesson.",
         epilog="Checks:\n" + menu,

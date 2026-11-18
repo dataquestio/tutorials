@@ -90,6 +90,11 @@ def run_day(day, state_dir, config, client=None):
     # unattended approvals, then record the day in state.json. A day that ends
     # in an error isn't marked done. Save the state last, so a crash mid-day
     # never marks the day as done. Return the result.
+    #
+    # 1. Load the state, and point permissions.APPROVER at this day's approver.
+    # 2. Run the agent on the day's task.
+    # 3. Add the runner's line to progress.md.
+    # 4. Record the day and its tokens, then save the state.
     ...
 
 
@@ -98,6 +103,11 @@ def run_range(start, end, config, max_total_tokens, client=None):
     # Fill in the body. Run days from where the saved state left off through
     # end, and return why the loop stopped: "done", "total_budget" (the total
     # token budget ran out), or "error" (a day stopped with an error).
+    #
+    # 1. Load the state, and say where you're resuming if days are already done.
+    # 2. Loop over the days: check the total budget, run the day, print a line,
+    #    and stop on an error.
+    # 3. Return "done" when the range is finished.
     ...
 
 
