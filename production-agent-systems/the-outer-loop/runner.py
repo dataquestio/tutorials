@@ -87,9 +87,8 @@ def queue_for_human(state, day):
 def run_day(day, state_dir, config, client=None):
     """Run the agent on one day with a fresh conversation, then commit the day."""
     # Fill in the body. Run the agent on this day with a fresh conversation and
-    # unattended approvals, then record the day in state.json. A day that ends
-    # in an error isn't marked done. Save the state last, so a crash mid-day
-    # never marks the day as done. Return the result.
+    # unattended approvals, then record the day in state.json. Save the state
+    # last, so a crash mid-day never marks the day as done. Return the result.
     #
     # 1. Load the state, and point permissions.APPROVER at this day's approver.
     # 2. Run the agent on the day's task.
@@ -99,14 +98,14 @@ def run_day(day, state_dir, config, client=None):
 
 
 def run_range(start, end, config, max_total_tokens, client=None):
-    """Run day after day until the end day, the total budget, or an error. Returns why it stopped."""
+    """Run day after day until the end day or the total budget. Returns why it stopped."""
     # Fill in the body. Run days from where the saved state left off through
-    # end, and return why the loop stopped: "done", "total_budget" (the total
-    # token budget ran out), or "error" (a day stopped with an error).
+    # end, and return why the loop stopped: "done" or "total_budget" (the total
+    # token budget ran out).
     #
     # 1. Load the state, and say where you're resuming if days are already done.
     # 2. Loop over the days: check the total budget, run the day, print a line,
-    #    and stop on an error.
+    #    and load the state again.
     # 3. Return "done" when the range is finished.
     ...
 

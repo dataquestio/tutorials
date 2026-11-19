@@ -9,9 +9,9 @@ days lives in files under state/:
     catalog.jsonl  the running event catalog (written by apply_day_to_catalog)
 
 state.json is only updated after a day finishes, and always by writing a
-new file and swapping it in. If the process is killed mid-day, or a day
-ends in an error, the next start repeats that day; nothing that was already
-committed is lost.
+new file and swapping it in. If the process is killed mid-day, or a model
+call fails and raises, the next start repeats that day; nothing that was
+already committed is lost.
 
 Usage:
     python runner.py --data-dir <path/to/usgs> --start 2026-06-01 --end 2026-06-07
@@ -91,18 +91,15 @@ def run_day(day, state_dir, config, client=None):
     with open(state_dir / "progress.md", "a", encoding="utf-8") as f:
         f.write(f"[runner] {day}: stop={result.stop_reason} steps={result.steps} "
                 f"tokens={result.input_tokens + result.output_tokens}\n")
-    if result.stop_reason != "error":
-        # A day that ended in an error didn't finish, so it isn't marked done.
-        # The next start runs it again.
-        state["completed_days"].append(day)
-        state["current_day"] = next_day(day)
+    state["completed_days"].append(day)
+    state["current_day"] = next_day(day)
     state["tokens_used_total"] += result.input_tokens + result.output_tokens
     save_state(state_dir, state)
     return result
 
 
 def run_range(start, end, config, max_total_tokens, client=None):
-    """Run day after day until the end day, the total budget, or an error. Returns why it stopped."""
+    """Run day after day until the end day or the total budget. Returns why it stopped."""
     state_dir = Path(config.workspace) / "state"
     state = load_state(state_dir, start)
     if state["completed_days"]:
@@ -115,8 +112,6 @@ def run_range(start, end, config, max_total_tokens, client=None):
         result = run_day(day, state_dir, config, client)
         print(f"{day}: {result.stop_reason}, {result.steps} steps, "
               f"{result.input_tokens + result.output_tokens} tokens")
-        if result.stop_reason == "error":
-            return "error"
         state = load_state(state_dir, start)
     return "done"
 

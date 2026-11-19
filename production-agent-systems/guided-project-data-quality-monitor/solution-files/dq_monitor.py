@@ -194,11 +194,8 @@ def run_dq_day(day, state_dir, config, client=None):
     with open(state_dir / "progress.md", "a", encoding="utf-8") as f:
         f.write(f"[runner] {day}: stop={result.stop_reason} steps={result.steps} "
                 f"tokens={result.input_tokens + result.output_tokens}\n")
-    if result.stop_reason != "error":
-        # A day that ended in an error didn't finish, so it isn't marked done.
-        # The next start runs it again.
-        state["completed_days"].append(day)
-        state["current_day"] = next_day(day)
+    state["completed_days"].append(day)
+    state["current_day"] = next_day(day)
     state["tokens_used_total"] += result.input_tokens + result.output_tokens
     state.setdefault("day_results", {})[day] = result.stop_reason
     save_state(state_dir, state)
@@ -214,8 +211,6 @@ def run_dq_range(start, end, config, max_total_tokens, client=None):
         day = state["current_day"]
         result = run_dq_day(day, state_dir, config, client)
         print(f"{day}: {result.stop_reason}, {result.steps} steps, {result.input_tokens + result.output_tokens} tokens")
-        if result.stop_reason == "error":
-            return "error"
         state = load_state(state_dir, start)
     return "done"
 

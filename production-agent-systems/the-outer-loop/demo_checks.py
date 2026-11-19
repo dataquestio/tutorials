@@ -228,11 +228,12 @@ def check_one_day():
 
 class ScriptedModel:
     """Stands in for the model. It answers every request right away with the same
-    reply and token counts, or fails on purpose, so runner logic can be checked
-    in seconds with no API calls."""
+    reply and token counts, or raises on purpose after a set number of calls, so
+    runner logic can be checked in seconds with no API calls."""
 
-    def __init__(self, fail=False):
-        self.fail = fail
+    def __init__(self, fail_after=None):
+        self.fail_after = fail_after  # None: never fail. 0: fail on the first call.
+        self.calls = 0
         self.chat = self
         self.completions = self
 
@@ -241,8 +242,9 @@ class ScriptedModel:
         from openai.types.chat import ChatCompletion, ChatCompletionMessage
         from openai.types.chat.chat_completion import Choice
 
-        if self.fail:
+        if self.fail_after is not None and self.calls >= self.fail_after:
             raise ConnectionError("The model API couldn't be reached.")
+        self.calls += 1
         return ChatCompletion(
             id="scripted", object="chat.completion", created=0, model="scripted",
             choices=[Choice(index=0, finish_reason="stop",
@@ -287,8 +289,13 @@ def check_one_day_scripted():
     first = report("[runner] 2026-06-01: stop=final steps=1 tokens=1050", ["2026-06-01"], "2026-06-02", 1050)
 
     print("\n2. A day where the model can't be reached:")
-    run_day("2026-06-02", state_dir, config, ScriptedModel(fail=True))
-    second = report("[runner] 2026-06-02: stop=error steps=1 tokens=0", ["2026-06-01"], "2026-06-02", 1050)
+    try:
+        run_day("2026-06-02", state_dir, config, ScriptedModel(fail_after=0))
+        print("  fix   run_day returned normally. Let the exception from run_agent pass through.")
+        second = False
+    except ConnectionError as e:
+        print(f"  ok    run_day raised ConnectionError: {e}")
+        second = report("[runner] 2026-06-01: stop=final steps=1 tokens=1050", ["2026-06-01"], "2026-06-02", 1050)
 
     if first and second:
         print("\nEverything checks out. Your run_day is ready for a live day.")
@@ -308,7 +315,7 @@ def check_exits():
     config = fresh_config(TEST_EXITS_DIR)
     stopped = run_range("2026-06-01", "2026-06-03", config, 100_000, ScriptedModel())
     if stopped is None:
-        print("run_range returned None. It should return why it stopped: done, total_budget, or error.")
+        print("run_range returned None. It should return why it stopped: done or total_budget.")
         return
     print("Stopped:", stopped)
 
@@ -319,9 +326,12 @@ def check_exits():
     config = fresh_config(TEST_EXITS_DIR)
     print("Stopped:", run_range("2026-06-01", "2026-06-05", config, 2_000, ScriptedModel()))
 
-    print("\n4. A fresh start, June 1 to 3, and the model can't be reached:")
+    print("\n4. A fresh start, June 1 to 3, and the model goes down after June 2:")
     config = fresh_config(TEST_EXITS_DIR)
-    print("Stopped:", run_range("2026-06-01", "2026-06-03", config, 100_000, ScriptedModel(fail=True)))
+    try:
+        print("Stopped:", run_range("2026-06-01", "2026-06-03", config, 100_000, ScriptedModel(fail_after=2)))
+    except ConnectionError as e:
+        print(f"run_range raised ConnectionError: {e}")
     state = json.loads(Path(TEST_EXITS_DIR, "state", "state.json").read_text(encoding="utf-8"))
     print(f"state.json: current_day {state['current_day']}, completed_days {state['completed_days']}")
 
