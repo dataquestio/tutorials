@@ -8,18 +8,12 @@ days lives in files under state/:
     progress.md    notes the agent leaves for its next run
     catalog.jsonl  the running event catalog (written by apply_day_to_catalog)
 
-The imports, RECENT_PROGRESS_LINES, and next_day are provided. Below the
-"YOUR OUTER LOOP" divider, each function already has its signature in place
-and you fill in the body as the lesson walks through it:
-  - load_state and save_state, to read and safely write state.json
-  - recent_progress and build_day_task, to give each day a fresh task
-  - queue_for_human, to hold approvals when nobody is watching
-  - run_day, to run the agent on one day and commit it
-  - run_range, the loop over days and its exits
-  - the budgets in the command-line block at the bottom (the rest of that
-    block is provided)
+state.json is only updated after a day finishes, and always by writing a
+new file and swapping it in. If the process is killed mid-day, or a model
+call fails and raises, the next start repeats that day; nothing that was
+already committed is lost.
 
-Usage (once you've written it):
+Usage:
     python runner.py --data-dir <path/to/usgs> --start 2026-06-01 --end 2026-06-07
 """
 
@@ -42,71 +36,77 @@ def next_day(day):
     return (date.fromisoformat(day) + timedelta(days=1)).isoformat()
 
 
-# ===========================================================================
-# YOUR OUTER LOOP
-# ===========================================================================
-
-
 def load_state(state_dir, start_day):
-    """Read state.json, or start fresh at start_day."""
-    # Fill in the body. Return the state dictionary: current_day,
-    # completed_days, tokens_used_total, and pending_approvals. Use what's
-    # saved in state_dir if there is a state.json, otherwise a fresh state.
+    """Read state.json, or start fresh at start_day.
+
+    The state holds current_day, completed_days, tokens_used_total, and
+    pending_approvals.
+    """
+    # TODO: Return the saved state, or a fresh one if there's no state.json
     ...
 
 
 def save_state(state_dir, state):
-    """Write state.json so that a crash never leaves a half-written file."""
-    # Fill in the body. Save state as state.json in state_dir. A crash partway
-    # through must leave either the old file or the new one, never half of one.
+    """Write state.json so that a crash never leaves a half-written file.
+
+    A crash partway through leaves either the old file or the new one.
+    """
+    # TODO: Write a temporary file, then swap it in for state.json
     ...
 
 
 def recent_progress(state_dir):
-    # Fill in the body. Return the most recent lines of progress.md in state_dir
-    # as one string (at most RECENT_PROGRESS_LINES), or "(no earlier runs)" if
-    # there's no progress.md yet.
+    """The most recent lines of progress.md as one string.
+
+    Returns at most RECENT_PROGRESS_LINES lines, or "(no earlier runs)" if
+    there's no progress.md yet.
+    """
+    # TODO: Return the last lines of progress.md, or "(no earlier runs)"
     ...
 
 
 def build_day_task(day, state, state_dir):
-    """The task for one daily run. Everything the agent needs from earlier days is in here or in state/."""
-    # Fill in the body. Return the task text for one day. It's all the agent
-    # knows about earlier days, so it carries the day to process, a short
-    # summary of the state, and the most recent progress notes.
+    """The task for one daily run. Everything the agent needs from earlier days is in here or in state/.
+
+    The task carries the day to process, a short summary of the state, and
+    the most recent progress notes.
+    """
+    # TODO: Return the day, a state summary, and recent progress as one string
     ...
 
 
 def queue_for_human(state, day):
-    """An approver for unattended runs: record the request and say no for now."""
-    # Fill in the body. Return an approver function, approver(tool, args), that
-    # records each request in state["pending_approvals"] and refuses it for now.
+    """An approver for unattended runs: record the request and say no for now.
+
+    Returns approver(tool, args), which adds each request to
+    state["pending_approvals"] and returns False.
+    """
+    # TODO: Return an approver that records each request and refuses it
     ...
 
 
 def run_day(day, state_dir, config, client=None):
-    """Run the agent on one day with a fresh conversation, then commit the day."""
-    # Fill in the body. Run the agent on this day with a fresh conversation and
-    # unattended approvals, then record the day in state.json. Save the state
-    # last, so a crash mid-day never marks the day as done. Return the result.
-    #
-    # 1. Load the state, and point permissions.APPROVER at this day's approver.
-    # 2. Run the agent on the day's task.
-    # 3. Add the runner's line to progress.md.
-    # 4. Record the day and its tokens, then save the state.
+    """Run the agent on one day with a fresh conversation, then commit the day.
+
+    state.json is saved last, so a crash mid-day never marks the day as done.
+    Returns the agent's result.
+    """
+    # TODO: Load the state and point permissions.APPROVER at this day's approver
+    # TODO: Run the agent on the day's task
+    # TODO: Add the runner's line to progress.md
+    # TODO: Record the day and its tokens, save the state, and return the result
     ...
 
 
 def run_range(start, end, config, max_total_tokens, client=None):
-    """Run day after day until the end day or the total budget. Returns why it stopped."""
-    # Fill in the body. Run days from where the saved state left off through
-    # end, and return why the loop stopped: "done" or "total_budget" (the total
-    # token budget ran out).
-    #
-    # 1. Load the state, and say where you're resuming if days are already done.
-    # 2. Loop over the days: check the total budget, run the day, print a line,
-    #    and load the state again.
-    # 3. Return "done" when the range is finished.
+    """Run day after day until the end day or the total budget. Returns why it stopped.
+
+    The loop starts from where the saved state left off and returns "done" or
+    "total_budget".
+    """
+    # TODO: Load the state and print where it's resuming, if days are done
+    # TODO: Loop through the days, checking the total budget before each one
+    # TODO: Return "done" when the range is finished
     ...
 
 
@@ -121,11 +121,9 @@ if __name__ == "__main__":
     parser.add_argument("--trace-path", default="traces/trace.jsonl")
     parser.add_argument("--model", default=os.environ.get("AGENT_MODEL", "gpt-6-luna"))
     parser.add_argument("--max-steps", type=int, default=20, help="Model calls per day")
-    # Fill in: add the two token budgets, one for each day's run and one for
-    # the whole range.
+    # TODO: Add --max-tokens-per-day and --max-total-tokens
     args = parser.parse_args()
 
     workspace = Path(args.workspace)
     prepare_workspace(workspace, Path(args.data_dir))
-    # Fill in: build the AgentConfig, with the per-day budget as its token
-    # limit, then run the range with the total budget and print why it stopped.
+    # TODO: Build the AgentConfig, run the range, and print why it stopped

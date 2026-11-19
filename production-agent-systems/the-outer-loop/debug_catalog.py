@@ -1,13 +1,10 @@
 """Check a monitor's catalog against a rebuild that doesn't use the model.
 
-The imports, the command-line options, and the printed summary are provided.
-Below the "YOUR CHECK" divider, each function already has its signature in
-place and you fill in the body:
-  - completed_days, to read which days the checked folder has finished
-  - rebuild_catalog, to replay those days into an empty catalog
-  - load_checked, to load the checked folder's catalog
+It replays the days the checked folder's state.json lists as done into an
+empty catalog, then compares the result with the folder's own catalog. If
+they match, the folder's catalog is exactly what those days should produce.
 
-Usage (once you've filled it in):
+Usage:
     python debug_catalog.py --data-dir data/usgs --workspace monitor
 """
 
@@ -23,15 +20,9 @@ from runner import load_state
 REBUILD_DIR = Path("catalog_rebuild")
 
 
-# ===========================================================================
-# YOUR CHECK
-# ===========================================================================
-
-
 def completed_days(workspace):
     """The days the folder's state.json lists as done."""
-    # Fill in the body. Return the completed_days list from the state in the
-    # folder's state/ subfolder.
+    # TODO: Return completed_days from the state in the folder's state/
     ...
 
 
@@ -42,15 +33,13 @@ def rebuild_catalog(data_dir, days):
     # from an empty catalog.
     shutil.rmtree(REBUILD_DIR, ignore_errors=True)
     prepare_workspace(REBUILD_DIR, Path(data_dir))
-    # Fill in the rest. Point the feed tools at REBUILD_DIR, apply each of the
-    # days, and return the rebuilt catalog.
+    # TODO: Point the tools at REBUILD_DIR, apply each day, return the catalog
     ...
 
 
 def load_checked(workspace):
     """The catalog in the folder being checked."""
-    # Fill in the body. Point the feed tools at the folder and return its
-    # catalog.
+    # TODO: Point the feed tools at the folder and return its catalog
     ...
 
 
