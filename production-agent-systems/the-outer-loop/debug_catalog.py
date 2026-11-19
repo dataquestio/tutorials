@@ -28,12 +28,9 @@ def completed_days(workspace):
 
 def rebuild_catalog(data_dir, days):
     """Apply each day to an empty catalog in catalog_rebuild/ and return it."""
-    # shutil.rmtree deletes a folder and everything in it. ignore_errors=True
-    # means it's fine if the folder isn't there yet, so every rebuild starts
-    # from an empty catalog.
-    shutil.rmtree(REBUILD_DIR, ignore_errors=True)
-    prepare_workspace(REBUILD_DIR, Path(data_dir))
-    # TODO: Point the tools at REBUILD_DIR, apply each day, return the catalog
+    # TODO: Clear REBUILD_DIR and link the feed into it
+    # TODO: Point the tools at REBUILD_DIR and apply each day
+    # TODO: Return the rebuilt catalog
     ...
 
 
