@@ -2,6 +2,8 @@
 
 Usage:
     python run.py --data-dir <path/to/nyc311> --question "Which borough had the most noise complaints in July?"
+
+This is starter code. Complete each TODO as the lesson walks through it.
 """
 
 import argparse
@@ -31,6 +33,9 @@ if __name__ == "__main__":
     parser.add_argument("--trace-path", default="traces/trace.jsonl")
     parser.add_argument("--model", default=os.environ.get("AGENT_MODEL", "gpt-6-luna"))
     parser.add_argument("--max-steps", type=int, default=20)
+    # TODO:
+    # - Add a --max-tokens option
+    # - Add a --compact-at option
     args = parser.parse_args()
 
     workspace = Path(args.workspace)
@@ -41,6 +46,9 @@ if __name__ == "__main__":
         workspace=workspace,
         trace_path=Path(args.trace_path),
         max_steps=args.max_steps,
+        # TODO:
+        # - Pass --max-tokens as max_tokens_total
+        # - Pass --compact-at as compact_at_tokens
     )
     result = run_agent(args.question, config)
 
