@@ -22,21 +22,26 @@ REBUILD_DIR = Path("catalog_rebuild")
 
 def completed_days(workspace):
     """The days the folder's state.json lists as done."""
-    # TODO: Return completed_days from the state in the folder's state/
+    # TODO:
+    # - Load the state from the folder's state/ subfolder
+    # - Return its completed_days
     ...
 
 
 def rebuild_catalog(data_dir, days):
     """Apply each day to an empty catalog in catalog_rebuild/ and return it."""
-    # TODO: Clear REBUILD_DIR and link the feed into it
-    # TODO: Point the tools at REBUILD_DIR and apply each day
-    # TODO: Return the rebuilt catalog
+    # TODO:
+    # - Clear REBUILD_DIR and link the feed into it
+    # - Point the tools at REBUILD_DIR and apply each day
+    # - Return the rebuilt catalog
     ...
 
 
 def load_checked(workspace):
     """The catalog in the folder being checked."""
-    # TODO: Point the feed tools at the folder and return its catalog
+    # TODO:
+    # - Point the feed tools at the folder
+    # - Return its catalog
     ...
 
 
