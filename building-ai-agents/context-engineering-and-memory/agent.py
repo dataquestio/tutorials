@@ -5,6 +5,8 @@ This is the tool loop from the Function Calling lesson with three changes:
 1. General tools (files, Python, shell) instead of one function per question.
 2. Explicit stopping conditions: a final answer, a step limit, or a token budget.
 3. A system prompt that tells the model to check its results before answering.
+
+This is starter code. Complete each TODO as the lesson walks through it.
 """
 
 import json
@@ -14,9 +16,14 @@ import uuid
 
 from openai import OpenAI
 
+# TODO:
+# - Import memory
 import tools
 from tracing import write_event
 
+# TODO:
+# - Add a "Large files" section to the prompt text
+# - Add a "Notes" section to the prompt text
 SYSTEM_PROMPT = """You are a data analysis agent. You answer questions about the data in your workspace.
 
 Your workspace is a folder. The data is under data/. You can list and read files, write files, and run Python or shell commands with the workspace as the working directory.
@@ -30,6 +37,15 @@ How to work:
 """
 
 
+def build_system_prompt(workspace):
+    """The system prompt, plus notes from earlier runs if there are any."""
+    # TODO:
+    # - Load notes with memory.load_notes
+    # - Return SYSTEM_PROMPT with the notes below it if there are any
+    # - Return SYSTEM_PROMPT otherwise
+    ...
+
+
 class AgentConfig:
     def __init__(
         self,
@@ -39,6 +55,8 @@ class AgentConfig:
         max_steps=20,
         max_tokens_total=200_000,
         reasoning_effort="none",
+        # TODO:
+        # - Add compact_at_tokens with a default of 60_000
     ):
         self.model = model
         self.workspace = workspace
@@ -48,6 +66,8 @@ class AgentConfig:
         # gpt-6-luna only accepts tools on Chat Completions with reasoning off.
         # Set to None for providers that don't accept this parameter.
         self.reasoning_effort = reasoning_effort
+        # TODO:
+        # - Store compact_at_tokens on self
 
 
 class AgentResult:
@@ -77,6 +97,8 @@ def run_agent(task, config, client=None):
     files_before = workspace_files(config.workspace)
 
     messages = [
+        # TODO:
+        # - Use build_system_prompt(config.workspace) as the content
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": task},
     ]
@@ -133,12 +155,19 @@ def run_agent(task, config, client=None):
                 tool=name, args=arguments, result=result,
                 duration_ms=int((time.monotonic() - started) * 1000),
             )
+            # TODO:
+            # - Build this message with memory.to_tool_message
             messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": json.dumps(result)})
 
         # Check the budget after the step, so the run stops before the next call.
         if input_tokens + output_tokens >= config.max_tokens_total:
             stop_reason = "budget"
             break
+
+        # TODO:
+        # - Compact messages when usage.prompt_tokens passes config.compact_at_tokens
+        # - Add the summary call's usage to the run totals
+        # - Write a "compaction" trace event
 
     if stop_reason != "final":
         write_event(config.trace_path, run_id, step, "stop", result={"stop_reason": stop_reason})

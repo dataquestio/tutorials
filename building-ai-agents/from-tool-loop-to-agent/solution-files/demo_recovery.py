@@ -84,8 +84,10 @@ class ScriptedModel:
         if self.turn == 3:
             print("3. Model fixes the code with the real column names and date format.")
             return reply(call=("run_python", {"code": FIXED_CODE}))
+        answer = "Noise complaints per month, summer 2026:\n" + result["stdout"]
         print("4. Model answers with the result.")
-        return reply(content="Noise complaints per month, summer 2026:\n" + result["stdout"])
+        print(answer)
+        return reply(content=answer)
 
 
 def indent(text):
@@ -102,7 +104,5 @@ if __name__ == "__main__":
     prepare_workspace(workspace, Path(args.data_dir))
     config = AgentConfig(model="scripted", workspace=workspace, trace_path=workspace.parent / "trace.jsonl")
 
-    result = run_agent("Count noise complaints per month in summer 2026.", config, client=ScriptedModel())
-    print(f"\nStopped because: {result.stop_reason} after {result.steps} steps")
-    print(result.answer)
-    print(f"Trace: {config.trace_path}")
+    run_agent("Count noise complaints per month in summer 2026.", config, client=ScriptedModel())
+    print(f"\nTrace: {config.trace_path}")
