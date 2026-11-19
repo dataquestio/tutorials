@@ -1,7 +1,10 @@
 from openai import OpenAI
 import json
 import os
+from dotenv import load_dotenv
 from products import get_product_info, calculate_bulk_price
+
+load_dotenv()
 
 TOOL_FUNCTIONS = {
     "get_product_info": get_product_info,
@@ -22,8 +25,7 @@ def execute_tool(function_name: str, arguments: dict) -> str:
         return json.dumps({"error": f"Tool execution failed: {e}"})
 
 client = OpenAI(
-    api_key=os.environ.get("TOGETHER_API_KEY"),
-    base_url="https://api.together.xyz/v1"
+    api_key=os.environ.get("OPENAI_API_KEY")
 )
 
 tools = [
@@ -81,7 +83,7 @@ def run_agent(user_message: str, tools: list, max_iterations: int = 10) -> str:
 
     for i in range(max_iterations):
         response = client.chat.completions.create(
-            model="meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+            model="gpt-4o-mini",
             messages=messages,
             tools=tools,
             tool_choice="auto",
