@@ -9,8 +9,9 @@ days lives in files under state/:
     catalog.jsonl  the running event catalog (written by apply_day_to_catalog)
 
 state.json is only updated after a day finishes, and always by writing a
-new file and swapping it in. If the process is killed mid-day, the next
-start repeats that day; nothing that was already committed is lost.
+new file and swapping it in. If the process is killed mid-day, or a model
+call fails and raises, the next start repeats that day; nothing that was
+already committed is lost.
 
 Usage:
     python runner.py --data-dir <path/to/usgs> --start 2026-06-01 --end 2026-06-07
@@ -98,7 +99,7 @@ def run_day(day, state_dir, config, client=None):
 
 
 def run_range(start, end, config, max_total_tokens, client=None):
-    """Run day after day until the end day, the total budget, or an error. Returns why it stopped."""
+    """Run day after day until the end day or the total budget. Returns why it stopped."""
     state_dir = Path(config.workspace) / "state"
     state = load_state(state_dir, start)
     if state["completed_days"]:
@@ -111,8 +112,6 @@ def run_range(start, end, config, max_total_tokens, client=None):
         result = run_day(day, state_dir, config, client)
         print(f"{day}: {result.stop_reason}, {result.steps} steps, "
               f"{result.input_tokens + result.output_tokens} tokens")
-        if result.stop_reason == "error":
-            return "error"
         state = load_state(state_dir, start)
     return "done"
 

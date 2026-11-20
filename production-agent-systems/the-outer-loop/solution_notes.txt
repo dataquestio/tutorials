@@ -19,7 +19,8 @@ The lesson adds runner.py:
 
 - run_day(day, state_dir, config, client=None): fresh run_agent conversation per day, then
   commits state.json (current_day, completed_days, tokens_used_total, pending_approvals).
-- Exit criteria in run_range: end day reached, total token budget, or an "error" stop.
+- Exit criteria in run_range: end day reached or total token budget. A failed model call
+  raises out of run_agent, so the day isn't saved and the next start repeats it.
 - Budgets: AgentConfig.max_tokens_total is per run (--max-tokens-per-day); --max-total-tokens
   is across runs.
 - Unattended approvals: permissions.APPROVER is swapped for queue_for_human, so "ask" tools
