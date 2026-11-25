@@ -4,12 +4,11 @@ It replays the days the checked folder's state.json lists as done into an
 empty catalog, then compares the result with the folder's own catalog. If
 they match, the folder's catalog is exactly what those days should produce.
 
-Usage:
-    python debug_catalog.py --data-dir data/usgs --workspace monitor
+Usage (delete the last rebuild first, so it starts from an empty catalog):
+    rm -rf catalog_rebuild && python debug_catalog.py --data-dir data/usgs --workspace monitor
 """
 
 import argparse
-import shutil
 from pathlib import Path
 
 import tools
@@ -26,11 +25,11 @@ def completed_days(workspace):
 
 
 def rebuild_catalog(data_dir, days):
-    """Apply each day to an empty catalog in catalog_rebuild/ and return it."""
-    # shutil.rmtree deletes a folder and everything in it. ignore_errors=True
-    # means it's fine if the folder isn't there yet, so every rebuild starts
-    # from an empty catalog.
-    shutil.rmtree(REBUILD_DIR, ignore_errors=True)
+    """Apply each day to the catalog in catalog_rebuild/ and return it.
+
+    Delete the folder first (rm -rf catalog_rebuild), so the rebuild starts
+    from an empty catalog.
+    """
     prepare_workspace(REBUILD_DIR, Path(data_dir))
     tools.WORKSPACE = REBUILD_DIR
     for day in days:

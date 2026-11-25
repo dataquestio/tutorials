@@ -105,9 +105,16 @@ def run_day(day, state_dir, config, client=None):
     Returns the agent's result.
     """
     # TODO:
-    # - Load the state and point permissions.APPROVER at this day's approver
-    # - Run the agent on the day's task
-    # - Add the runner's line to progress.md
+    # - Create the state folder, load the state, and point permissions.APPROVER at this day's approver
+    # - Run the agent on the day's task, and keep the result
+    ...
+
+    # The runner's own line in progress.md, so every day records how it ended.
+    with open(state_dir / "progress.md", "a", encoding="utf-8") as f:
+        f.write(f"[runner] {day}: stop={result.stop_reason} steps={result.steps} "
+                f"tokens={result.input_tokens + result.output_tokens}\n")
+
+    # TODO:
     # - Record the day and its tokens, save the state, and return the result
     ...
 
