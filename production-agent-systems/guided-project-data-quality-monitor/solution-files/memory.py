@@ -9,7 +9,6 @@ replaced by a short summary the model writes itself. The system prompt and
 the most recent messages stay as they are.
 """
 
-NOTES_FILE = "NOTES.md"
 KEEP_RECENT_MESSAGES = 6
 
 SUMMARY_PROMPT = (
