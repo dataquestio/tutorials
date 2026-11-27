@@ -73,7 +73,7 @@ class AgentConfig:
 class AgentResult:
     def __init__(self, answer, stop_reason, steps, input_tokens, output_tokens, files_written):
         self.answer = answer
-        self.stop_reason = stop_reason  # "final", "max_steps", "budget", or "error"
+        self.stop_reason = stop_reason  # "final", "max_steps", or "budget"
         self.steps = steps
         self.input_tokens = input_tokens
         self.output_tokens = output_tokens
@@ -121,12 +121,7 @@ def run_agent(task, config, client=None):
                         input_tokens=usage.prompt_tokens, output_tokens=usage.completion_tokens)
 
         started = time.monotonic()
-        try:
-            response = client.chat.completions.create(model=config.model, messages=messages, **extra)
-        except Exception as e:
-            write_event(config.trace_path, run_id, step, "error", result={"error": str(e)})
-            stop_reason = "error"
-            break
+        response = client.chat.completions.create(model=config.model, messages=messages, **extra)
 
         usage = response.usage
         last_prompt_tokens = usage.prompt_tokens
